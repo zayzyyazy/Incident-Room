@@ -157,7 +157,7 @@ The transcript can look fine while execution failed — the core failure class.
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/incident-room.git
+git clone https://github.com/zayzyyazy/Incident-Room.git
 cd incident-room
 npm install
 cp .env.example .env.local
