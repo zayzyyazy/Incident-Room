@@ -12,7 +12,7 @@ export function EvidencePanel({ evidence }: { evidence: VoiceIncidentEvidence })
   const tabs: { id: Tab; label: string }[] = [
     { id: "transcript", label: "Conversation · L1" },
     { id: "execution", label: "Execution · L2" },
-    { id: "customer", label: "Customer · L3" },
+    { id: "customer", label: "Pattern · L3" },
   ];
 
   return (
@@ -107,11 +107,11 @@ export function EvidencePanel({ evidence }: { evidence: VoiceIncidentEvidence })
         {tab === "customer" && (
           <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed border-room-border bg-room-bg p-6 text-center">
             <div className="text-sm font-medium text-room-muted">
-              Customer context · Phase 2
+              Pattern context · Phase 2
             </div>
             <p className="mt-2 max-w-sm text-xs text-room-muted">
-              Prior calls, open tickets, and CRM snapshot will appear here when
-              Customer Impact Analyst is connected.
+              Prior calls, recurrence, and workflow patterns will appear here
+              when Pattern Analyst is connected.
             </p>
           </div>
         )}

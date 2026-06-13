@@ -1,36 +1,55 @@
 # Incident Room
 
-**Cross-layer voice incident investigation for customer support.**
+**Find where a voice AI call failed — when the transcript says it was fine.**
 
-Voice AI calls can look successful in the transcript while execution failed silently — tool timeouts, missing side effects, parameter drift. Incident Room runs **blind specialist agents** on different evidence layers, posts findings to a **Band** collaboration room, and (Phase 2+) lets a **Service Commander** decide escalation from Band history only.
+Voice AI customer calls can *sound* successful while execution failed silently: tool never called, API timeout, wrong parameters, hallucinated confirmation before the backend responded. Most tools ask one model *"was this call good?"* from the **transcript only**. Execution traces (`function_calls`, side effects, errors) often exist but never reach the verdict.
 
-Built for the **Band of Agents Hackathon** (lablab.ai). Inspired by real QA work on Pflegemittelbox / Leaping voice calls where transcript-only analysis misses execution failures.
+Incident Room is a **cross-layer failure autopsy** for voice AI operators. Blind specialist agents each inspect one layer of evidence, post findings to a **Band** investigation room, and a **Failure Synthesizer** (Phase 2) states root cause and failure class from Band history only.
+
+Built for the **Band of Agents Hackathon** ([lablab.ai](https://lablab.ai)). Born from real Pflegemittelbox / Leaping QA — where transcript analysis and execution traces live in the same system but the main analyzer only reads the transcript.
+
+> **Product lock:** See [PRODUCT.md](./PRODUCT.md) before adding features. Primary question: **where did it fail?** Not: "what should CS do?"
+
+---
+
+## What we are / what we are not
+
+| We are | We are not |
+|--------|------------|
+| Forensic QA across conversation vs execution vs pattern | Transcript summarizer |
+| "Where did it fail?" (layer + class + evidence) | "What should CS do?" escalation inbox |
+| Tool for voice AI builders / operators / QA | Tool for human ticket-queue agents |
+| Customer-*facing* calls as the artifact | Customer-*support workflow* automation |
+| Multi-agent investigation with Band audit trail | Single LLM call with a fancy UI |
 
 ---
 
 ## What exists today (Phase 0–1 + MVP dashboard)
 
-| Layer | Status |
-|-------|--------|
+| Component | Status |
+|-----------|--------|
 | Band integration (create room, post agent events) | Done |
 | Conversation Analyst (L1) | Live |
 | Outcome Investigator (L2) | Live |
-| Customer Impact Analyst (L3) | Phase 2 |
-| Service Commander (Band-only) | Phase 2 |
+| Pattern Analyst (L3) | Phase 2 |
+| Failure Synthesizer (Band-only) | Phase 2 |
 | Operations dashboard | MVP |
 | Investigation room UI | MVP |
 | Paste JSON import | MVP |
-| Real Leaping normalize pipeline | Phase 5 |
+| Leaping normalize pipeline | Phase 5 |
 
 ---
 
-## The problem
+## The failure question (core)
 
-Many voice QA tools ask one model: *"Was this call good?"* using the **transcript only**.
+Each investigation classifies failures across layers:
 
-Execution data (`function_calls`, API errors, side effects) often exists but is **not fed to the verdict model**. The call can **sound** resolved while the backend never created the appointment, sent the SMS, or updated CRM.
-
-Incident Room splits investigation across agents with **enforced information asymmetry** — each agent only sees its layer — and uses **Band** as the shared audit trail.
+| Layer | Example failure modes |
+|-------|------------------------|
+| **Conversation (L1)** | Wrong intent, misunderstood entity, hallucinated confirmation, ended before tool result, premature verbal closure |
+| **Execution (L2)** | Tool not called, parameter drift, API timeout/latency, silent tool error, workflow continued after error, missing side effect |
+| **Pattern (L3)** | Same failure mode on prior calls, regression, recurring customer/workflow hit |
+| **Synthesis (Band)** | Which layer owns the failure, combined root cause, fix surface (integration, prompt, policy) |
 
 ---
 
@@ -57,7 +76,7 @@ Evidence bundle (JSON)
           |
           v
    Dashboard mirrors feed
-   (human-facing war room)
+   (operator-facing autopsy UI)
 ```
 
 - **Orchestrator + Band REST** — not four long-lived Band SDK daemons.
@@ -66,49 +85,53 @@ Evidence bundle (JSON)
 
 ---
 
-## The four agents (product spec)
+## The four agents
 
 ### 1. Conversation Analyst (Live)
 
 | | |
 |---|---|
-| **Question** | What did the call *look like* to the customer? |
-| **Access** | Layer 1 only — transcript, segments, behavioral hints |
-| **Cannot see** | HTTP codes, tool logs, CRM, churn |
-| **Output** | `conversation_analysis` with `conversation_verdict` |
-| **Verdicts** | `appears_resolved` / `appears_unresolved` / `ambiguous` |
+| **Question** | What did the **conversation layer** assert or imply? |
+| **Access** | L1 only — transcript, segments, behavioral hints |
+| **Cannot see** | HTTP codes, tool logs, API payloads, recurrence |
+| **Output** | `conversation_analysis` |
+| **Failure lens** | Intent misunderstanding, ambiguous resolution, hallucinated or premature resolution |
 | **Model** | AI/ML API `gpt-4o-mini` (fallback: Featherless) |
 
 ### 2. Outcome Investigator (Live)
 
 | | |
 |---|---|
-| **Question** | Did the intended outcome *actually happen*? |
-| **Access** | Layer 2 — function_calls, side effects, structured MSG-01 fields |
-| **Cannot see** | Full transcript prose, business/churn narrative |
-| **Output** | `outcome_analysis` with `execution_verdict` |
-| **Verdicts** | `outcome_achieved` / `outcome_failed` / `outcome_uncertain` |
-| **Special** | Sets `contradicts_msg_id` when L1 says resolved but L2 failed |
+| **Question** | What did **execution** actually do? |
+| **Access** | L2 — function_calls, side_effects, structured fields from MSG-01 |
+| **Cannot see** | Full transcript narrative, pattern story |
+| **Output** | `outcome_analysis` |
+| **Failure lens** | `parameter_drift`, `silent_tool_error`, `backend_failure`, `noop_side_effect`, `workflow_continued_after_error` |
+| **Special** | `contradicts_msg_id` when L1 implies resolution but L2 shows failure |
 | **Model** | Featherless (fallback: AI/ML API `gpt-4o`) |
 
-### 3. Customer Impact Analyst (Phase 2)
+### 3. Pattern Analyst (Phase 2)
 
 | | |
 |---|---|
-| **Question** | How bad is this for the customer and queue? |
-| **Access** | Layer 3 — prior calls, open tickets, recurrence (offline CRM fixture) |
+| **Question** | Is this failure **recurring** for this customer or workflow? |
+| **Access** | L3 — prior calls, tickets, offline CRM fixture |
 | **Cannot see** | Raw transcript, raw tool payloads |
-| **Output** | `customer_impact_analysis` |
-| **May** | Dispute Outcome severity via `disputes_msg_id` |
+| **Output** | `pattern_analysis` (planned) |
+| **Failure lens** | Systemic recurrence, repeat API failures — not queue severity as primary |
 
-### 4. Service Commander (Phase 2)
+### 4. Failure Synthesizer (Phase 2)
 
 | | |
 |---|---|
-| **Question** | What should customer service *do*? |
+| **Question** | **Where did it fail, what is the root cause class, which layer owns the fix?** |
 | **Access** | **Band thread only** — no evidence JSON |
-| **Output** | `service_resolution` — severity, actions, cites MSG IDs |
-| **Constraint** | Cannot use facts not present in Band history |
+| **Output** | `failure_synthesis` (planned) — layer, classes, cited MSG IDs, fix surface |
+| **Must not** | CS playbooks or ticket routing as the primary answer |
+
+**Example synthesis:**
+
+> Conversation layer verbally confirmed at T05 before L2 scheduling returned 504. Class: `workflow_continued_after_error` + `backend_failure`. Fix surface: scheduling API integration + confirm-after-tool policy.
 
 ---
 
@@ -116,10 +139,10 @@ Evidence bundle (JSON)
 
 Fixture: `fixtures/hero-klaus-minimal.json`
 
-- **L1:** Agent verbally confirms callback for Klaus Muller (German Pflegemittelbox-style call).
-- **L2:** `create_callback_appointment` returns **504 Gateway Timeout**, `appointment_created: false`, SMS skipped.
+- **L1:** Agent verbally confirms callback for Klaus Müller (German Pflegemittelbox-style call).
+- **L2:** `create_callback_appointment` → **504 Gateway Timeout**, `appointment_created: false`, SMS skipped.
 
-The transcript can look fine while execution failed — the core incident class.
+The transcript can look fine while execution failed — the core failure class.
 
 ---
 
@@ -134,7 +157,7 @@ The transcript can look fine while execution failed — the core incident class.
 ### Setup
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/YOUR_USERNAME/incident-room.git
 cd incident-room
 npm install
 cp .env.example .env.local
@@ -158,7 +181,7 @@ npm run dev
 Open **http://localhost:3000**
 
 1. **Dashboard** — incident list, import JSON, agent status
-2. Open **Klaus** incident, click **Run investigation**
+2. Open **Klaus** incident → **Run investigation**
 3. Watch agent cards appear; evidence tabs on the left
 
 ---
@@ -167,19 +190,19 @@ Open **http://localhost:3000**
 
 ### `/` — Operations desk
 
-- Table of incidents: status, last conversation/execution verdict, run count
-- **Import evidence JSON** — paste a `VoiceIncidentEvidence` bundle, validate, open incident room
+- Incident table: status, verdicts, run count
+- **Import evidence JSON** — paste `VoiceIncidentEvidence`, validate, open room
 - Agent roster (live vs Phase 2)
 
 ### `/incidents/[id]` — Investigation room
 
-- **Left:** Evidence tabs (Conversation L1, Execution L2, Customer L3 placeholder)
-- **Right:** Agent feed — cards appear in order after investigation
-- **Run investigation** — triggers orchestrator + Band posts
-- **Verdict strip** — cross-layer summary
-- **History** — past runs with timestamps and verdicts
+- **Left:** Evidence tabs (Conversation L1, Execution L2, Pattern L3 placeholder)
+- **Right:** Agent feed — cards in order after investigation
+- **Run investigation** — orchestrator + Band posts
+- **Verdict strip** — cross-layer failure summary
+- **History** — past runs with timestamps
 
-Band posts use the **events API** (`thought` type) because Band rejects self-mentions on `/messages`. In Band UI, filter **Event type -> thought**, or use the room ID in the verdict strip.
+Band posts use `/events` (`thought` type) because Band rejects self-mentions on `/messages`. Use the room ID in the verdict strip; filter **Event type → thought** in Band UI if needed.
 
 ---
 
@@ -192,7 +215,7 @@ Band posts use the **events API** (`thought` type) because Band rejects self-men
 | `GET` | `/api/incidents` | List incidents |
 | `POST` | `/api/incidents` | Register `{ evidence }` or `{ rawJson: "..." }` |
 | `GET` | `/api/incidents/[id]` | Get incident + investigation history |
-| `POST` | `/api/incidents/[id]/investigate` | Run 2-agent investigation, post to Band |
+| `POST` | `/api/incidents/[id]/investigate` | Run 2-agent investigation → Band |
 
 ### Dev (debugging)
 
@@ -218,28 +241,18 @@ Band posts use the **events API** (`thought` type) because Band rejects self-men
 }
 ```
 
-Paste full JSON on the dashboard import panel.
-
 ---
 
 ## Repository layout
 
 ```
 incident-room/
-├── src/app/
-│   ├── page.tsx                    # Dashboard
-│   ├── incidents/[id]/page.tsx     # Investigation room
-│   └── api/incidents/              # CRUD + investigate
-├── src/components/
-│   ├── dashboard/                  # Import panel
-│   └── incident/                   # Evidence, feed, verdict
-├── src/lib/
-│   ├── agents/                     # Prompts, runners, registry
-│   ├── band/                       # Band REST client
-│   ├── evidence/                   # Zod types
-│   ├── incidents/                  # In-memory store
-│   ├── llm/                        # Multi-model router
-│   └── orchestrator/               # Context filter, pipeline
+├── PRODUCT.md                      # Product lock — read first
+├── src/app/                        # Dashboard + incident room + API
+├── src/components/                 # UI components
+├── src/lib/agents/registry.ts      # Agent roster (extend here)
+├── src/lib/band/                   # Band REST client
+├── src/lib/orchestrator/           # Investigation pipeline
 └── fixtures/hero-klaus-minimal.json
 ```
 
@@ -257,8 +270,8 @@ incident-room/
 
 - Response wrapper: `{ "data": { "id": "..." } }`
 - `task_id` on create room must be a **UUID** or omitted
-- Agent posts cannot self-mention on `/messages` — use `/events` with `message_type: "thought"`
-- Room titles stay "New Session" in Band until a human text message — dashboard shows proper titles
+- Agent posts use `/events` with `message_type: "thought"` (no self-mention on `/messages`)
+- Band session titles stay generic — dashboard shows proper incident titles
 
 Docs: [Band Agent API](https://docs.thenvoi.com/api/agent-api)
 
@@ -268,21 +281,24 @@ Docs: [Band Agent API](https://docs.thenvoi.com/api/agent-api)
 
 | Phase | Scope |
 |-------|--------|
-| 0-1 | Band spike, two agents, dev APIs |
+| 0–1 | Band spike, two agents, dev APIs |
 | 1b | MVP dashboard |
-| 2 | Customer Impact + Service Commander, full Klaus L3 |
+| 2 | Pattern Analyst + Failure Synthesizer, full Klaus L3 |
 | 3 | Clarification loops in Band |
-| 4 | CRM fixture lookup |
+| 4 | CRM fixture lookup (pattern layer) |
 | 5 | Leaping normalize, dev tooling |
 | 6 | Multi-incident seed, SSE, Vercel deploy |
 
 ---
 
-## Hackathon positioning
+## Hackathon pitch (30 seconds)
 
-- **Track 1:** Customer support escalation — voice AI incident response
-- **Track 3 tag:** Regulated demo (German healthcare-adjacent hero call)
-- **Pitch:** Agents hold different layers of reality and coordinate in Band; remove Band and the Commander is blind.
+> Customer voice calls fail in ways transcripts hide. Incident Room runs blind agents on conversation, execution, and pattern layers — they post to a real Band room — and a synthesizer names **where it failed** and **what class of failure** it was. Built from voice AI QA where we had execution logs but the analyzer only read the transcript.
+
+- **Problem class:** Voice AI pipeline failures invisible to transcript-only QA
+- **Band role:** Investigation record — specialists post, synthesizer reads thread only
+- **Differentiation:** Layer blindness + execution forensics, not generic call scoring
+- **Demo:** Klaus — verbal callback confirmed, scheduling 504, no appointment created
 
 ---
 

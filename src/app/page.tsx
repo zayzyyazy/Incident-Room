@@ -125,13 +125,13 @@ export default function DashboardPage() {
               status: "live",
             },
             {
-              name: "Customer Impact",
+              name: "Pattern Analyst",
               layer: "L3",
               color: "text-amber-warm border-amber-warm/40",
               status: "phase 2",
             },
             {
-              name: "Service Commander",
+              name: "Failure Synthesizer",
               layer: "Band",
               color: "text-command border-command/40",
               status: "phase 2",
