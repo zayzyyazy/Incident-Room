@@ -1,0 +1,95 @@
+{
+  "incident_id": "PMB-2024-0847",
+  "source_platform": "leaping",
+  "title": "Klaus — callback confirmed, appointment not created",
+  "call_metadata": {
+    "duration_sec": 312,
+    "status": "completed",
+    "leaping_call_id": "leap_call_klaus_demo_001"
+  },
+  "layer1_conversation": {
+    "transcript": "Agent: Guten Tag, Pflegemittelbox Service. Wie kann ich Ihnen helfen?\nCustomer: Hallo, ich bin Klaus Müller. Ich brauche einen Rückruf für meine Box-Lieferung.\nAgent: Natürlich, Herr Müller. Ich sehe Ihre Versichertennummer endet auf 4821. Richtig?\nCustomer: Ja, genau.\nAgent: Ich buche Ihnen einen Rückruf für morgen Vormittag ein. Sie bekommen eine Bestätigung.\nCustomer: Super, danke.\nAgent: Gern geschehen. Einen schönen Tag noch.",
+    "segments": [
+      {
+        "turn_id": "T01",
+        "speaker": "agent",
+        "text": "Guten Tag, Pflegemittelbox Service. Wie kann ich Ihnen helfen?"
+      },
+      {
+        "turn_id": "T02",
+        "speaker": "customer",
+        "text": "Hallo, ich bin Klaus Müller. Ich brauche einen Rückruf für meine Box-Lieferung."
+      },
+      {
+        "turn_id": "T03",
+        "speaker": "agent",
+        "text": "Natürlich, Herr Müller. Ich sehe Ihre Versichertennummer endet auf 4821. Richtig?"
+      },
+      {
+        "turn_id": "T04",
+        "speaker": "customer",
+        "text": "Ja, genau."
+      },
+      {
+        "turn_id": "T05",
+        "speaker": "agent",
+        "text": "Ich buche Ihnen einen Rückruf für morgen Vormittag ein. Sie bekommen eine Bestätigung."
+      },
+      {
+        "turn_id": "T06",
+        "speaker": "customer",
+        "text": "Super, danke."
+      },
+      {
+        "turn_id": "T07",
+        "speaker": "agent",
+        "text": "Gern geschehen. Einen schönen Tag noch."
+      }
+    ],
+    "intent": "schedule_callback",
+    "behavioral_hints": [
+      {
+        "type": "premature_closure",
+        "turn_ref": "T05",
+        "note": "Agent verbally confirms callback before tool result is known."
+      }
+    ]
+  },
+  "layer2_execution": {
+    "function_calls": [
+      {
+        "name": "lookup_customer",
+        "args": { "vnr_last4": "4821", "phone": "+491701234567" },
+        "result": { "customer_id": "cust_klaus_001", "name": "Klaus Müller" },
+        "status": "success",
+        "turn_ref": "T03"
+      },
+      {
+        "name": "create_callback_appointment",
+        "args": {
+          "customer_id": "cust_klaus_001",
+          "slot": "2024-11-12T09:00:00+01:00",
+          "channel": "phone"
+        },
+        "result": { "error": "upstream_timeout", "message": "Gateway timeout" },
+        "status": "timeout",
+        "http_status": 504,
+        "error_message": "504 Gateway Timeout from scheduling API",
+        "turn_ref": "T05"
+      },
+      {
+        "name": "send_confirmation_sms",
+        "args": { "customer_id": "cust_klaus_001", "template": "callback_confirmed" },
+        "result": { "skipped": true, "reason": "no_appointment_id" },
+        "status": "error",
+        "turn_ref": "T05"
+      }
+    ],
+    "side_effects": {
+      "appointment_created": false,
+      "appointment_id": null,
+      "sms_sent": false,
+      "crm_record_exists": true
+    }
+  }
+}

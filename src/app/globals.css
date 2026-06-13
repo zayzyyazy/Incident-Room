@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --room-bg: #0c0e12;
+  --room-panel: #151922;
+  --room-panel-elevated: #1c2230;
+  --room-border: #2a3144;
+  --room-text: #e8eaed;
+  --room-muted: #8b939e;
+  --room-trace: #4ecdc4;
+  --room-signal: #e8954a;
+  --room-alert: #ff6b6b;
+  --room-command: #a78bfa;
+  --room-amber: #fbbf24;
+  --background: var(--room-bg);
+  --foreground: var(--room-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--room-bg);
+  min-height: 100vh;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(rgba(78, 205, 196, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(78, 205, 196, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .shadow-glow-trace {
+    box-shadow: 0 0 24px rgba(78, 205, 196, 0.12);
+  }
+
+  .shadow-glow-signal {
+    box-shadow: 0 0 24px rgba(232, 149, 74, 0.12);
+  }
+
+  .shadow-glow-amber {
+    box-shadow: 0 0 24px rgba(251, 191, 36, 0.12);
+  }
+
+  .shadow-glow-command {
+    box-shadow: 0 0 24px rgba(167, 139, 250, 0.12);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s ease-out both;
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.4s ease-in-out infinite;
+}
