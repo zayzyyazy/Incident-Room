@@ -1,0 +1,103 @@
+{
+  "incident_id": "LEAP-2026-0613-anissa",
+  "source_platform": "leaping",
+  "title": "Anissa Jukul — missing items escalated by email, customer never verified",
+  "call_metadata": {
+    "duration_sec": 279,
+    "status": "completed",
+    "leaping_call_id": "06a2d4c9-1a68-76b0-8000-1bd4b7141747"
+  },
+  "layer1_conversation": {
+    "transcript": "Agent: Willkommen bei der Pflegemittelbox. Mein Name ist Marie, ich bin die digitale Assistentin am Telefon. Wobei kann ich Sie unterstützen?\nCustomer: Ich habe mehrfach gemeldet, dass bei meiner Pflegemittelbox zwei Artikel fehlen.\nAgent: Damit ich Ihr Anliegen aufnehmen kann, benötige ich bitte noch Ihr Geburtsdatum.\nCustomer: Zehnter April zweitausendeins.\nAgent: Das Geburtsdatum stimmt leider nicht mit unseren Daten überein.\nCustomer: Ich möchte mit einer Person reden, bitte — nicht KI.\nAgent: Der Kundenservice ist geschlossen. Ich kann Ihr Anliegen aufnehmen und an meine Kollegen weiterleiten.\nCustomer: Genau. Mehrfach angerufen, nichts passiert.\nAgent: Ich habe das Anliegen soeben erfolgreich an meine Kollegen übermittelt. Diese werden sich bei Ihnen melden. Auf Wiederhören.",
+    "segments": [
+      {
+        "turn_id": "T01",
+        "speaker": "agent",
+        "text": "Willkommen bei der Pflegemittelbox. Mein Name ist Marie, ich bin die digitale Assistentin am Telefon. Wobei kann ich Sie unterstützen?"
+      },
+      {
+        "turn_id": "T02",
+        "speaker": "customer",
+        "text": "Ich habe mehrfach gemeldet, dass bei meiner Pflegemittelbox zwei Artikel fehlen."
+      },
+      {
+        "turn_id": "T03",
+        "speaker": "agent",
+        "text": "Damit ich Ihr Anliegen aufnehmen kann, benötige ich bitte noch Ihr Geburtsdatum."
+      },
+      {
+        "turn_id": "T04",
+        "speaker": "customer",
+        "text": "Zehnter April zweitausendeins."
+      },
+      {
+        "turn_id": "T05",
+        "speaker": "agent",
+        "text": "Das Geburtsdatum stimmt leider nicht mit unseren Daten überein."
+      },
+      {
+        "turn_id": "T06",
+        "speaker": "customer",
+        "text": "Ich möchte mit einer Person reden, bitte — nicht KI."
+      },
+      {
+        "turn_id": "T07",
+        "speaker": "agent",
+        "text": "Ich kann Ihr Anliegen aufnehmen und an meine Kollegen weiterleiten."
+      },
+      {
+        "turn_id": "T08",
+        "speaker": "agent",
+        "text": "Ich habe das Anliegen soeben erfolgreich an meine Kollegen übermittelt. Diese werden sich bei Ihnen melden. Auf Wiederhören."
+      }
+    ],
+    "intent": "missing_items",
+    "behavioral_hints": [
+      {
+        "type": "premature_closure",
+        "turn_ref": "T08",
+        "note": "Agent claims successful handoff while customer identity was never verified."
+      }
+    ]
+  },
+  "layer2_execution": {
+    "function_calls": [
+      {
+        "name": "get_customer_by_phone",
+        "args": { "phone": "+4917630671098" },
+        "result": { "id": "104202", "birthday": "2021-04-10", "status": "aktiv" },
+        "status": "success",
+        "turn_ref": "T01"
+      },
+      {
+        "name": "check_birthday",
+        "args": { "birthday_genannt": "2001-04-10" },
+        "result": "False",
+        "status": "success",
+        "turn_ref": "T04"
+      },
+      {
+        "name": "send_email",
+        "args": {
+          "summary": "Missing items in Pflegemittelbox, repeated calls, customer frustrated."
+        },
+        "result": { "id": "5759b9d1-347c-4c7c-be65-92aff9cb718c" },
+        "status": "success",
+        "turn_ref": "T08"
+      }
+    ],
+    "side_effects": {
+      "appointment_created": false,
+      "appointment_id": null,
+      "sms_sent": false,
+      "crm_record_exists": true
+    }
+  },
+  "layer3_customer": {
+    "crm_id": "104202",
+    "name": "Anissa Jukul",
+    "phone": "+4917630671098",
+    "birthday_system": "2021-04-10",
+    "identity_verified": false
+  }
+}

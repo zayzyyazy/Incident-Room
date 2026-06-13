@@ -10,13 +10,71 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Fri 13 Jun 2026, ~15:00):** Phase 0–1 is **working**. Two agents run end-to-end on Maria and Klaus. Dashboard looks good. Pattern Analyst + Failure Synthesizer still TODO.
+**Status (as of Fri 13 Jun 2026, ~night):** Phase 0–1 **demo-ready**. Three failure archetypes working in UI: direct action fail (Maria/Klaus), failure-driven handoff (Anissa). Pattern Analyst + Failure Synthesizer still TODO.
 
-**Demo that works today:** Import Maria JSON → Run investigation → see L1 vs L2 split + Band room link.
+**Demo that works today:**
+- **Klaus** — direct action, scheduling 504, `path: direct action`
+- **Maria** — direct action, CRM 403, contradiction + Band link
+- **Anissa** (real Leaping) — handoff after birthday fail, `failure driven escalation`
 
 ---
 
 ## Timeline (newest first)
+
+### Fri 13 Jun 2026 — ~night — Full UI test pass 🎉🎉
+
+**What happened:** Ran investigations in the dashboard on Klaus + Anissa (Maria same pattern). Everything we built showed up correctly in the UI and Band.
+
+**Klaus (`PMB-2024-0847`):**
+- CA: **appears resolved** (callback scheduled verbally)
+- OI: **outcome failed** — 504 on `create_callback_appointment`, SMS skipped
+- Cross-layer: *"Transcript suggests resolution but execution failed — silent backend failure"*
+- Path: **direct action** (no colleague handoff)
+
+**Anissa (`LEAP-2026-0613-anissa`) — real Leaping import:**
+- CA: **appears resolved** (customer thinks colleagues will fix missing items)
+- OI: **outcome failed** — `check_birthday` mismatch, email handoff only
+- Badges: **path: handoff to colleagues** + **handoff: failure driven escalation** 🔴
+- Cross-layer + contradiction line both fire correctly
+- This is the key insight: `send_email` succeeding ≠ customer outcome achieved
+
+**Feeling:** YES. This is not just Maria/Klaus toys — real Pflegemittelbox call shape works. The handoff taxonomy makes the demo story honest.
+
+**Next:** Failure Synthesizer (Phase 2) when ready tonight.
+
+---
+
+### Fri 13 Jun 2026 — evening — L1/L2 contradiction tuning (items 1 & 2)
+
+**What happened:** Tuned Conversation Analyst prompt + added deterministic fallbacks so the demo story hits harder.
+
+**Changes:**
+- CA prompt: explicit agent completion ("I've updated…") → `appears_resolved`
+- Code fallback: `premature_closure` hints + agent completion phrases → force `appears_resolved`
+- OI fallback: if execution failed + verbal closure → always set `contradicts_msg_id` in Band
+
+**Test results (API):**
+- Maria: CA `appears_resolved`, OI `outcome_failed`, contradiction **detected** ✅
+- Klaus: same ✅
+
+**Next:** Failure Synthesizer (Phase 2) tonight if energy allows.
+
+---
+
+### Fri 13 Jun 2026 — late evening — Handoff vs direct action taxonomy
+
+**Problem:** Marie "forwarding to colleagues" is NOT the same as Marie solving directly — and handoff can be **by design** OR **because something failed first**.
+
+**Fix:**
+- OI prompt + deterministic `handoff-classifier` on `function_calls`
+- New fields: `resolution_mode`, `handoff_reason`, `handoff_detail_en`
+- UI shows path + handoff reason on OI card and cross-layer strip
+- Saved real Leaping case: `test-anissa-handoff-failure.json` → `failure_driven_escalation` ✅
+- Maria still → `direct_action` + `not_applicable` ✅
+
+**Note:** Platform-agnostic — works on any evidence JSON with tool calls, not Leaping-only.
+
+---
 
 ### Fri 13 Jun 2026 — ~14:58 — Maria investigation runs successfully 🎉
 
@@ -104,7 +162,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 | Band spike | 422 on task_id, undefined room id | ✅ Fixed |
 | Band messages | cannot_mention_self | ✅ Fixed — use /events |
 | Maria demo | Incident not found after reload | ✅ Fixed — disk fallback |
-| Maria demo | Contradiction flag not firing | 🔶 Open — tuning |
+| Maria demo | Contradiction flag not firing | ✅ Fixed — CA resolved + OI contradicts |
 | Pattern tab | Empty "Phase 2" placeholder | ⏳ Expected — PA not built |
 | Store | Imports lost on dev restart | ✅ Mitigated — fixtures on disk |
 | Env | Need `.env.local` keys (Band, AIMLAPI, Featherless) | ✅ Working locally |
@@ -118,6 +176,9 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 - [x] Dark "signal room" UI with evidence tabs (L1 / L2 / Pattern placeholder)
 - [x] Klaus hero scenario working
 - [x] Maria second scenario working after store fix
+- [x] Anissa real Leaping case — failure-driven handoff taxonomy in UI
+- [x] Handoff vs direct action distinction (capability vs failure-driven)
+- [x] Three demo archetypes: Klaus, Maria, Anissa
 - [x] Clear product lock in `PRODUCT.md`
 - [x] GitHub repo live
 
@@ -144,8 +205,8 @@ _Use this section when you step away — coffee, sleep, teammate sync, hackathon
 - [ ] Clarification loops (OI → CA, max 2 re-runs)
 
 **Demo polish**
-- [ ] Tune Maria: CA → `appears_resolved` when agent confirms address at T05
-- [ ] Stronger `contradiction.detected` for L1/L2 mismatch
+- [x] Tune Maria: CA → `appears_resolved` when agent confirms address at T05
+- [x] Stronger `contradiction.detected` for L1/L2 mismatch
 - [ ] Pre-seed Maria + Klaus on home page (no import step for judges)
 
 **Teammate (reprobateboffin)**

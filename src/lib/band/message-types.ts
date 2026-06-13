@@ -47,6 +47,22 @@ export const ToolFailureSchema = z.object({
   turn_ref: z.string().optional(),
 });
 
+export const ResolutionModeSchema = z.enum([
+  "direct_action",
+  "handoff_to_colleagues",
+  "mixed",
+  "unclear",
+]);
+
+export const HandoffReasonSchema = z.enum([
+  "capability_by_design",
+  "failure_driven_escalation",
+  "policy_constraint",
+  "customer_requested_human",
+  "not_applicable",
+  "unknown",
+]);
+
 export const OutcomeAnalysisSchema = z.object({
   type: z.literal("outcome_analysis"),
   agent_role: z.literal("outcome_investigator"),
@@ -56,6 +72,9 @@ export const OutcomeAnalysisSchema = z.object({
   side_effects_observed: z.record(z.string(), z.unknown()),
   contradicts_msg_id: z.string().nullable(),
   contradiction_reason_en: z.string().nullable(),
+  resolution_mode: ResolutionModeSchema.optional(),
+  handoff_reason: HandoffReasonSchema.optional(),
+  handoff_detail_en: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1).optional(),
 });
 

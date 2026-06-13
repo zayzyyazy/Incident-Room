@@ -4,6 +4,7 @@ import {
 } from "@/lib/band/message-types";
 import { OUTCOME_INVESTIGATOR_SYSTEM_PROMPT } from "@/lib/agents/prompts/outcome-investigator";
 import { AGENT_MODELS, completeJson } from "@/lib/llm/router";
+import { finalizeOutcomeAnalysis } from "@/lib/orchestrator/finalize-outcome";
 
 export async function runOutcomeInvestigator(
   filteredContext: unknown,
@@ -29,27 +30,11 @@ export async function runOutcomeInvestigator(
       ],
     });
 
-    if (
-      conversationMsgId &&
-      result.contradicts_msg_id === null &&
-      result.execution_verdict === "outcome_failed" &&
-      (filteredContext as { conversation_analysis?: { conversation_verdict?: string } })
-        .conversation_analysis?.conversation_verdict === "appears_resolved"
-    ) {
-      return {
-        ...result,
-        contradicts_msg_id: conversationMsgId,
-        contradiction_reason_en:
-          result.contradiction_reason_en ??
-          "Conversation analysis reported resolution but execution layer shows the intended outcome did not occur.",
-      };
-    }
-
-    return result;
+    return finalizeOutcomeAnalysis(result, filteredContext, conversationMsgId);
   } catch (primaryError) {
     const fallback = primary.fallback;
     try {
-      return await completeJson(OutcomeAnalysisSchema, {
+      const result = await completeJson(OutcomeAnalysisSchema, {
         provider: fallback.provider,
         model: fallback.model,
         messages: [
@@ -60,6 +45,7 @@ export async function runOutcomeInvestigator(
           },
         ],
       });
+      return finalizeOutcomeAnalysis(result, filteredContext, conversationMsgId);
     } catch {
       throw primaryError;
     }
