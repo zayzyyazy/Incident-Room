@@ -1,5 +1,4 @@
-const DEFAULT_BASE_URL = "https://app.band.ai/api/v1";
-
+const DEFAULT_BASE_URL = "https://api.band.ai";
 export class BandApiError extends Error {
   constructor(
     message: string,

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ImportEvidencePanel } from "@/components/dashboard/ImportEvidencePanel";
 import { AppShell, Panel, StatusPill } from "@/components/ui/shell";
 import { IncidentSummary } from "@/lib/incidents/types";
-
+import { useRouter } from 'next/navigation';
 function formatVerdict(value?: string) {
   if (!value) {
     return "—";
@@ -16,7 +16,7 @@ function formatVerdict(value?: string) {
 export default function DashboardPage() {
   const [incidents, setIncidents] = useState<IncidentSummary[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const router = useRouter();
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -33,12 +33,14 @@ export default function DashboardPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-
+    const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
   return (
     <AppShell
       title="Operations desk"
       subtitle="Incidents & investigation history"
     >
+      <button onClick={()=>{    router.push(`/chat/${newChatId}`)}}>Chat</button>
+
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Panel title="Incidents">
           <div className="overflow-x-auto">
@@ -108,7 +110,6 @@ export default function DashboardPage() {
 
         <ImportEvidencePanel onImported={refresh} />
       </div>
-
       <Panel title="Active agents" className="mt-6">
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
           {[
