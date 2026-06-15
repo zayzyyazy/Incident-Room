@@ -13,32 +13,84 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function loadSeedFixture() {
-  const fixturePath = path.join(
-    process.cwd(),
-    "fixtures",
-    "hero-klaus-minimal.json",
-  );
+function loadFixtureFile(fixturePath: string) {
   const raw = fs.readFileSync(fixturePath, "utf8");
   return VoiceIncidentEvidenceSchema.parse(JSON.parse(raw));
 }
 
-function seedIfEmpty() {
-  if (incidents.size > 0) {
-    return;
-  }
+function fixturePathsOnDisk(): string[] {
+  const roots = [
+    path.join(process.cwd(), "fixtures"),
+    path.join(process.cwd(), "fixtures", "seeded"),
+  ];
 
-  const evidence = loadSeedFixture();
+  const paths: string[] = [];
+  for (const root of roots) {
+    if (!fs.existsSync(root)) {
+      continue;
+    }
+    for (const entry of fs.readdirSync(root)) {
+      if (entry.endsWith(".json")) {
+        paths.push(path.join(root, entry));
+      }
+    }
+  }
+  return paths;
+}
+
+function upsertFromEvidenceFile(
+  fixturePath: string,
+  preserveInvestigations?: InvestigationRun[],
+): IncidentRecord {
+  const evidence = loadFixtureFile(fixturePath);
+  const existing = incidents.get(evidence.incident_id);
   const timestamp = nowIso();
 
-  incidents.set(evidence.incident_id, {
+  const record: IncidentRecord = {
     id: evidence.incident_id,
     evidence,
-    status: "pending",
-    createdAt: timestamp,
+    status: existing?.status ?? "pending",
+    createdAt: existing?.createdAt ?? timestamp,
     updatedAt: timestamp,
-    investigations: [],
-  });
+    lastRoomId: existing?.lastRoomId,
+    investigations: preserveInvestigations ?? existing?.investigations ?? [],
+  };
+
+  incidents.set(evidence.incident_id, record);
+  return record;
+}
+
+function seedFromDisk() {
+  for (const fixturePath of fixturePathsOnDisk()) {
+    try {
+      const evidence = loadFixtureFile(fixturePath);
+      if (!incidents.has(evidence.incident_id)) {
+        upsertFromEvidenceFile(fixturePath);
+      }
+    } catch {
+      // Skip non-evidence JSON (e.g. crm/customers.json lives elsewhere)
+    }
+  }
+}
+
+function seedIfEmpty() {
+  if (incidents.size === 0) {
+    seedFromDisk();
+  }
+}
+
+function loadIncidentFromDisk(id: string): IncidentRecord | undefined {
+  for (const fixturePath of fixturePathsOnDisk()) {
+    try {
+      const evidence = loadFixtureFile(fixturePath);
+      if (evidence.incident_id === id) {
+        return upsertFromEvidenceFile(fixturePath);
+      }
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
 }
 
 export function listIncidents(): IncidentSummary[] {
@@ -67,7 +119,11 @@ export function listIncidents(): IncidentSummary[] {
 
 export function getIncident(id: string): IncidentRecord | undefined {
   seedIfEmpty();
-  return incidents.get(id);
+  const cached = incidents.get(id);
+  if (cached) {
+    return cached;
+  }
+  return loadIncidentFromDisk(id);
 }
 
 export function upsertIncidentFromEvidence(

@@ -109,7 +109,22 @@ function AgentCard({
           {outcome ? (
             <VerdictBadge label="execution" value={outcome.execution_verdict} />
           ) : null}
+          {outcome?.resolution_mode ? (
+            <VerdictBadge
+              label="path"
+              value={outcome.resolution_mode.replace(/_/g, " ")}
+            />
+          ) : null}
+          {outcome?.handoff_reason &&
+          outcome.handoff_reason !== "not_applicable" &&
+          outcome.handoff_reason !== "unknown" ? (
+            <VerdictBadge label="handoff" value={outcome.handoff_reason} />
+          ) : null}
         </div>
+
+        {outcome?.handoff_detail_en ? (
+          <p className="mt-2 text-xs text-room-muted">{outcome.handoff_detail_en}</p>
+        ) : null}
 
         {outcome?.tool_failures?.length ? (
           <ul className="mt-3 space-y-2 border-t border-room-border pt-3">

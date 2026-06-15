@@ -58,7 +58,7 @@ Do not make these the main deliverable:
 | Layer | Example modes |
 |-------|----------------|
 | L1 Conversation | Wrong intent, misunderstood entity, hallucinated confirmation, premature verbal closure |
-| L2 Execution | Tool not called, parameter drift, API timeout, silent tool error, workflow continued after error |
+| L2 Execution | Tool not called, parameter drift, API timeout, silent tool error, workflow continued after error, **failure-driven handoff** (ticket/email after prior failure) |
 | L3 Pattern | Same failure on prior calls, regression, recurring customer/workflow hit |
 | Synthesis | Combined root cause, cited MSG IDs, fix surface |
 
@@ -87,3 +87,27 @@ Do not make these the main deliverable:
 Verbal callback confirmed at T05 (L1) + `create_callback_appointment` 504 + no appointment (L2).
 
 Demo ends on **cross-layer failure location**, not "escalate Klaus."
+
+---
+
+## Direct action vs colleague handoff (critical)
+
+Voice agents often **do not solve** the request themselves. Incident Room must separate:
+
+| Path | Meaning | Example |
+|------|---------|---------|
+| **Direct action** | Backend tool fulfills the request | CRM address update, book callback |
+| **Handoff to colleagues** | Ticket/email/escalation for humans | `send_email`, create ticket |
+
+For handoffs, always ask **why**:
+
+| handoff_reason | Meaning |
+|----------------|---------|
+| **capability_by_design** | Workflow has no direct-action tool; handoff is the designed path |
+| **failure_driven_escalation** | Something failed first (identity, lookup, API), *then* handoff — not the happy path |
+| **policy_constraint** | After-hours, closed queue, etc. |
+| **customer_requested_human** | Caller asked for a person |
+
+**`send_email` success ≠ customer outcome achieved** if identity failed or the actual order/fix never ran.
+
+This taxonomy is **platform-agnostic** — derived from `function_calls` in `VoiceIncidentEvidence`, not Leaping-specific fields.

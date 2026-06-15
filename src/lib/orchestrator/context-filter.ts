@@ -15,11 +15,16 @@ export function forAgent02(
 ) {
   return {
     incident_id: evidence.incident_id,
+    layer1_conversation: {
+      behavioral_hints: evidence.layer1_conversation.behavioral_hints,
+      segments: evidence.layer1_conversation.segments,
+    },
     layer2_execution: evidence.layer2_execution,
     conversation_analysis: {
       conversation_verdict: conversationAnalysis.conversation_verdict,
       summary_en: conversationAnalysis.summary_en,
       spoken_entities: conversationAnalysis.spoken_entities,
+      notable_turns: conversationAnalysis.notable_turns,
     },
   };
 }

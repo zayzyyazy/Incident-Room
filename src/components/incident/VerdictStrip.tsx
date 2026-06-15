@@ -22,6 +22,9 @@ export function VerdictStrip({
 
   const conversation = run.conversationAnalysis?.conversation_verdict;
   const execution = run.outcomeAnalysis?.execution_verdict;
+  const resolutionMode = run.outcomeAnalysis?.resolution_mode;
+  const handoffReason = run.outcomeAnalysis?.handoff_reason;
+  const handoffDetail = run.outcomeAnalysis?.handoff_detail_en;
   const gap =
     conversation === "appears_resolved" && execution === "outcome_failed";
 
@@ -51,6 +54,27 @@ export function VerdictStrip({
           </p>
           {run.contradiction?.detected && run.contradiction.reason ? (
             <p className="mt-2 text-xs text-alert">{run.contradiction.reason}</p>
+          ) : null}
+          {resolutionMode && handoffReason && handoffReason !== "not_applicable" ? (
+            <p className="mt-2 text-xs text-room-muted">
+              <span className="text-signal">Resolution path:</span>{" "}
+              {resolutionMode.replace(/_/g, " ")} ·{" "}
+              <span
+                className={
+                  handoffReason === "failure_driven_escalation"
+                    ? "text-alert"
+                    : "text-trace"
+                }
+              >
+                {handoffReason.replace(/_/g, " ")}
+              </span>
+              {handoffDetail ? ` — ${handoffDetail}` : null}
+            </p>
+          ) : resolutionMode === "direct_action" ? (
+            <p className="mt-2 text-xs text-room-muted">
+              <span className="text-signal">Resolution path:</span> direct
+              backend action (no colleague handoff)
+            </p>
           ) : null}
         </div>
         {(roomId ?? run.roomId) ? (

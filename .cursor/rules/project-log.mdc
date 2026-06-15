@@ -1,0 +1,32 @@
+---
+description: Keep PROJECT_LOG.md updated with hackathon progress in plain language
+alwaysApply: true
+---
+
+# Project log
+
+This repo has a living diary: **`PROJECT_LOG.md`**.
+
+After you complete meaningful work in this project, append to it without being asked:
+
+- **Bug fix** — what broke, why, how we fixed it (with date/time)
+- **New feature** — what it does in one plain sentence
+- **Demo milestone** — e.g. first successful investigate run
+- **Decision** — product or architecture choice and the reason
+- **Blocker / break** — if the user steps away or work is stuck
+
+Format for timeline entries:
+
+```markdown
+### Day Mon DD Mon YYYY — HH:MM — Short title
+
+**What happened:** ...
+**Problem (if any):** ...
+**Fix / result:** ...
+```
+
+Write in **easy language**. Newest entries go **at the top** of the Timeline section (below "Where we are right now").
+
+Also update **Where we are right now** and check off items in **What's next** when appropriate.
+
+Do not rewrite old entries unless the user asks. Do not duplicate PRODUCT.md — the log is the journal; PRODUCT.md is the product lock.
