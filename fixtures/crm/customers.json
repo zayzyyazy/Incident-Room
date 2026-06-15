@@ -4,6 +4,9 @@
       "customer_id": "cust_klaus_001",
       "name": "Klaus Müller",
       "phone": "+491701234567",
+      "email": "klaus.mueller@example.de",
+      "birth_date": "1958-03-14",
+      "address": "Hauptstraße 8, 10115 Berlin",
       "vnr_last4": "4821",
       "prior_calls_14d": 3,
       "open_tickets": [
@@ -19,6 +22,9 @@
       "customer_id": "cust_maria_002",
       "name": "Maria Schmidt",
       "phone": "+491709876543",
+      "email": "maria.schmidt@example.de",
+      "birth_date": "1972-08-22",
+      "address": "Hauptstrasse 12, 10115 Berlin",
       "vnr_last4": "1192",
       "prior_calls_14d": 1,
       "open_tickets": [
@@ -29,6 +35,24 @@
         }
       ],
       "notes": "CRM write rejected on address update"
+    },
+    {
+      "customer_id": "104202",
+      "name": "Anissa Jukul",
+      "phone": "+4917630671098",
+      "email": "medic1praxis@gmail.com",
+      "birth_date": "2021-04-10",
+      "address": "Odwerk 620",
+      "vnr_last4": "0201",
+      "prior_calls_14d": 4,
+      "open_tickets": [
+        {
+          "id": "T-6102",
+          "status": "open",
+          "subject": "Missing items in Pflegemittelbox — repeated calls"
+        }
+      ],
+      "notes": "Caller often gives wrong birth year; missing Bettschutzeinlagen"
     }
   ]
 }

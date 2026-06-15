@@ -40,7 +40,20 @@ export function AppShell({
               </>
             ) : null}
           </div>
-          {actions}
+          <div className="flex items-center gap-4">
+            {actions}
+            <nav className="flex items-center gap-4 text-xs">
+              <Link href="/guide" className="text-room-muted hover:text-trace">
+                Guide
+              </Link>
+              <Link href="/" className="text-room-muted hover:text-trace">
+                Desk
+              </Link>
+              <Link href="/crm" className="text-room-muted hover:text-trace">
+                CRM
+              </Link>
+            </nav>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>

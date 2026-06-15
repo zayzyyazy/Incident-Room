@@ -31,7 +31,7 @@ export function getPrematureClosureTurnRefs(
     )
     .map((segment) => segment.turn_id);
 
-  return [...new Set([...fromHints, ...fromLanguage])];
+  return Array.from(new Set([...fromHints, ...fromLanguage]));
 }
 
 export function hasPrematureVerbalClosure(layer1?: Layer1Conversation): boolean {

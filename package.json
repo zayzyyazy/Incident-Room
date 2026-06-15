@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:agent": "tsx scripts/test-agent.ts",
-    "test:agent:watch": "nodemon --exec tsx scripts/test-agent.ts"
+    "test:agent:watch": "nodemon --exec tsx scripts/test-agent.ts",
+    "install:browsers": "bash scripts/install-playwright-chromium.sh",
+    "capture-screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {
     "@band-ai/sdk": "^0.1.6",

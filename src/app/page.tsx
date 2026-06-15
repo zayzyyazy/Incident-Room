@@ -50,7 +50,7 @@ export default function DashboardPage() {
                   <th className="px-4 py-3 font-medium">Incident</th>
                   <th className="px-4 py-3 font-medium">Platform</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Conversation</th>
+                  <th className="px-4 py-3 font-medium">Last cause</th>
                   <th className="px-4 py-3 font-medium">Execution</th>
                   <th className="px-4 py-3 font-medium">Runs</th>
                 </tr>
@@ -92,7 +92,9 @@ export default function DashboardPage() {
                         <StatusPill status={incident.status} />
                       </td>
                       <td className="px-4 py-3 text-xs text-room-muted">
-                        {formatVerdict(incident.lastVerdict)}
+                        {incident.lastCause
+                          ? `${incident.lastCause.slice(0, 56)}${incident.lastCause.length > 56 ? "…" : ""}`
+                          : formatVerdict(incident.lastVerdict)}
                       </td>
                       <td className="px-4 py-3 text-xs text-room-muted">
                         {formatVerdict(incident.lastExecutionVerdict)}
@@ -114,28 +116,28 @@ export default function DashboardPage() {
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              name: "Conversation Analyst",
+              name: "Claim Tracer",
               layer: "L1",
               color: "text-trace border-trace/40",
               status: "live",
             },
             {
-              name: "Outcome Investigator",
+              name: "Backend Witness",
               layer: "L2",
               color: "text-signal border-signal/40",
               status: "live",
             },
             {
-              name: "Pattern Analyst",
-              layer: "L3",
-              color: "text-amber-warm border-amber-warm/40",
-              status: "phase 2",
+              name: "Causal Judge",
+              layer: "Bridge",
+              color: "text-command border-command/40",
+              status: "live",
             },
             {
-              name: "Failure Synthesizer",
-              layer: "Band",
-              color: "text-command border-command/40",
-              status: "phase 2",
+              name: "Localization Room",
+              layer: "Room 2",
+              color: "text-amber-warm border-amber-warm/40",
+              status: "planned",
             },
           ].map((agent) => (
             <div

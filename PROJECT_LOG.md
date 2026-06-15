@@ -4,24 +4,116 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 **Repo:** https://github.com/zayzyyazy/Incident-Room  
 **Team:** Sara (zay) + reprobateboffin (generator bot / fake CRM data)  
-**Product one-liner:** Find where a voice AI call *actually* failed — not just what it sounded like.
+**Product one-liner:** The customer was told it worked. Did it actually work?
 
 ---
 
 ## Where we are right now
 
-**Status (as of Fri 13 Jun 2026, ~night):** Phase 0–1 **demo-ready**. Three failure archetypes working in UI: direct action fail (Maria/Klaus), failure-driven handoff (Anissa). Pattern Analyst + Failure Synthesizer still TODO.
+**Status (as of Sun 15 Jun 2026):** **Cause Room architecture locked and implemented in code.** Room 1 = Claim Tracer + Backend Witness + Causal Judge with **2 challenge rounds** and **Cause Finding** output. Legacy CA→OI pipeline kept for comparison.
 
-**Demo that works today:**
-- **Klaus** — direct action, scheduling 504, `path: direct action`
-- **Maria** — direct action, CRM 403, contradiction + Band link
-- **Anissa** (real Leaping) — handoff after birthday fail, `failure driven escalation`
+**Locked architecture (read `PRODUCT.md`):**
+- **Room 1 — Cause Room:** What happened? → Cause Finding + evolution + recurrence hint
+- **Room 2 — Localization Room (planned):** Where in stack? → suspect surfaces (not auto-fix)
+- **Recurrence:** orchestrator handoff field, not a third room
+
+**What runs today:**
+- **`POST /api/dev/investigate-cause-room`** — 9 Band posts, Klaus fixture default
+- **`POST /api/dev/investigate-two`** — legacy 2-agent pipeline
+- Fixtures: Klaus, Maria, Anissa + fake CRM
+
+**Next:** Run Cause Room on all fixtures, then UI feed showing opinion evolution across challenge rounds.
 
 ---
 
 ## Timeline (newest first)
 
-### Fri 13 Jun 2026 — ~night — Full UI test pass 🎉🎉
+### Sun 15 Jun 2026 — Localhost + Band UX + cross-room lock
+
+**Shipped:**
+- **localhost Investigate** → Cause Room (9 posts, evolution in UI)
+- **Band room titles:** `{incident_id} · {title}` (no more "New Session")
+- **Band posts:** human-readable English prose (JSON kept in metadata)
+- **Architecture lock:** Cause Finding v1 → Localization; optional **Cause Revision Request** (HOLD/REVISE) — not for Klaus unless artifacts support it
+
+**Try it:** `npm run dev` → http://localhost:3000 → Klaus → **Run Cause Room**
+
+---
+
+### Sun 15 Jun 2026 — Cause Room shipped in code 🔥
+
+**Decision:** Lock **Cause Room → Localization Room** two-room model. Room 1 agents renamed and rebuilt:
+
+| Agent | Domain | Belief |
+|-------|--------|--------|
+| **Claim Tracer** | Conversation only | Customer harm starts with what agent caused customer to believe |
+| **Backend Witness** | Execution only | Tool/API/state is ground truth |
+| **Causal Judge** | Bridge | Neither domain alone explains incident; introduces bridge hypotheses |
+
+**Collaboration rules locked:**
+- Hard evidence walls enforced in orchestrator context filters
+- **2 challenge rounds** — CT + BW CHALLENGE / SUPPORT / YIELD with `opinion_changed`
+- Final cause must differ from all opening hypotheses
+- Cause Finding includes `evolution[]` + `recurrence_hint_request`
+
+**Shipped in repo:**
+- `src/lib/cause-room/` — types, prompts, agents, context filters
+- `src/lib/orchestrator/run-cause-room-investigation.ts` — 9-post Band sequence
+- `src/app/api/dev/investigate-cause-room/route.ts`
+- Updated: `PRODUCT.md`, `SPRINT_PLAN.md`, agent registry
+
+**Klaus expected arc:** hallucinated success vs API failure → **premature confirmation after failed scheduling API**
+
+**Not built yet:** Localization Room, UI evolution feed, main dashboard wired to Cause Room
+
+---
+
+### Sun 15 Jun 2026 — Product pivot: belief evolution / success overturn (superseded by Cause Room lock)
+
+**Decision:** Stop optimizing audit-chain architecture on paper. **Do not pivot domain** (said vs did is the insight). **Pivot mechanic + story:**
+
+| Old | New |
+|-----|-----|
+| "Where did the call fail?" (headline) | "Customer told it worked — did it?" |
+| CA → OI → FS pipeline | CA → OI → PA → **CA revises** → Recorder |
+| Collaboration = Band fetch / FALSIFIED badge | Collaboration = **CA changes its mind** in Band |
+| Failure Synthesizer summarizes | **Recorder:** success overturned + fix owner |
+
+**Why:** Competitor review (Decision Desk, SafeHands, AEGIS, etc.) — judges remember **decisions and belief change**, not "multiple agents analyzed a call." SafeHands owns one-shot contradiction; we need **CA pass 2** + overturn banner (Video B).
+
+**Judge retell test:** "AI marked success; execution proved callback never booked; pattern showed repeats; analyst withdrew success."
+
+**Banned until Klaus runs:** new architecture docs, cross-platform, chat-agent platform pitch.
+
+**Updated:** `PRODUCT.md`, `PROJECT_LOG.md`, `README.md`, `PROJECT_EVOLUTION_LOG.md`, `SPRINT_PLAN.md`
+
+**Later same day — multi-room direction:** See **[EVOLUTION_AND_MULTIROOM_PLAN.md](./EVOLUTION_AND_MULTIROOM_PLAN.md)** — Room 1 Call Analyzer (CA+OI+Grounding Critic) → handoff packet → Room 2 Mistake Evaluator (3 advocates + convergence). Handoff doc for Chat to expand agents.
+
+---
+
+### Sat 14 Jun 2026 — late night — Fake CRM + Pattern tab live 🔥
+
+**What happened:** Built fake CRM end-to-end. Sara tested Klaus — Pattern tab pulled customer from CRM, OI ran with `crm_context`, investigation COMPLETE.
+
+**Shipped:**
+- `/crm` dashboard — name, phone, email, birth date, address, VNR last-4
+- Lookup by phone / customer_id / email / VNR from call evidence
+- Pattern · L3 tab shows matched customer (Klaus demo: prior calls, open ticket, address)
+- OI gets CRM context on investigate (birth date vs `check_birthday` cases)
+- Seed data: Klaus, Maria, Anissa in `fixtures/crm/customers.json`
+
+**Klaus re-test (`PMB-2024-0847`):**
+- Pattern tab: **Klaus Müller** matched on `customer_id`
+- CA appears resolved + OI outcome failed + cross-layer silent backend failure
+- "Third scheduling failure in two weeks" visible from CRM notes field
+
+**Ops note:** Multiple `next dev` processes broke localhost (404 on pages, API still 200). Fix: `pkill -f "next dev"`, `rm -rf .next`, one `npm run dev`.
+
+**TODO soon:** Remove "notes" from CRM UI — notes should be customer profile only, not call summaries (currently seed data mixes both).
+
+**Next tonight/tomorrow:** Failure Synthesizer v1, then push CRM code to GitHub for friend.
+
+---
 
 **What happened:** Ran investigations in the dashboard on Klaus + Anissa (Maria same pattern). Everything we built showed up correctly in the UI and Band.
 
@@ -178,7 +270,8 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 - [x] Maria second scenario working after store fix
 - [x] Anissa real Leaping case — failure-driven handoff taxonomy in UI
 - [x] Handoff vs direct action distinction (capability vs failure-driven)
-- [x] Three demo archetypes: Klaus, Maria, Anissa
+- [x] Fake CRM dashboard + lookup wired to Pattern tab + OI context
+- [x] Klaus CRM match demo (prior calls + open ticket in Pattern tab)
 - [x] Clear product lock in `PRODUCT.md`
 - [x] GitHub repo live
 
@@ -197,26 +290,30 @@ _Use this section when you step away — coffee, sleep, teammate sync, hackathon
 
 ## What's next (backlog)
 
-**Phase 2 — more agents**
-- [ ] Pattern Analyst (prior calls, recurrence) — wire `fixtures/crm/customers.json`
-- [ ] Failure Synthesizer — Band-only root cause + fix surface
+**Sprint — belief evolution (priority order)**
+- [ ] Schemas: interpretation, execution_audit, pattern_assessment, ca_revision, success_verdict
+- [ ] Rename `run-two-agent-investigation.ts` → `run-investigation.ts`
+- [ ] OI reads CA from Band (`getRoomHistory`) — remove in-memory CA handoff
+- [ ] PA posts recurrence (reads CA + OI from Band); CRM as PA input only
+- [ ] **CA pass 2** — withdraw success; reads OI + PA from Band
+- [ ] **Recorder** — SUCCESS OVERTURNED + engineering owner + cites MSG IDs
+- [ ] Klaus guardrails: `enforceKlausAssertions` + `finalizeExecutionAudit` (504)
+- [ ] UI P1: **SUCCESS CLASSIFICATION OVERTURNED** banner + CA pass 1 vs 2 visible
+- [ ] Pre-seed Klaus; Vercel deploy; **90s video** (UI + band.ai room)
 
-**Phase 3**
-- [ ] Clarification loops (OI → CA, max 2 re-runs)
-
-**Demo polish**
-- [x] Tune Maria: CA → `appears_resolved` when agent confirms address at T05
-- [x] Stronger `contradiction.detected` for L1/L2 mismatch
-- [ ] Pre-seed Maria + Klaus on home page (no import step for judges)
+**Cut / defer**
+- [ ] ~~Clarification loops~~ — cut
+- [ ] ~~SSE~~ — cut unless sprint ahead
+- [ ] ~~Chat / normalizer / DB platform~~ — cut from pitch and build
+- [ ] CRM: commit + wire for PA, **or** remove Pattern tab
 
 **Teammate (reprobateboffin)**
-- [ ] Generator: 3–5 failure archetypes matching `VoiceIncidentEvidence` schema
-- [ ] CRM rows keyed by phone / customer id
-- [ ] Failure types: silent_backend_failure, parameter_drift, noop_confirmation, etc.
+- [ ] Optional fixtures; Sara owns Klaus demo path
 
-**Later / nice-to-have**
-- [ ] Persist investigations to disk (not just evidence fixtures)
-- [ ] SSE live feed, Vercel deploy
+**Already done (keep)**
+- [x] Two-agent pipeline + Band posts
+- [x] Klaus / Maria / Anissa fixtures + handoff taxonomy
+- [x] Contradiction + CRM (local)
 
 ---
 

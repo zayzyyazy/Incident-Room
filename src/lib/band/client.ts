@@ -10,8 +10,8 @@ export class BandApiError extends Error {
   }
 }
 
-function getConfig() {
-  const apiKey = process.env.BAND_API_KEY;
+function getConfig(apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride ?? process.env.BAND_API_KEY;
   const baseUrl = process.env.BAND_REST_URL ?? DEFAULT_BASE_URL;
 
   if (!apiKey) {
@@ -23,15 +23,21 @@ function getConfig() {
 
 async function bandFetch<T>(
   path: string,
-  init?: RequestInit,
+  init?: RequestInit & { apiKey?: string; baseUrl?: string },
 ): Promise<T> {
-  const { apiKey, baseUrl } = getConfig();
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
+  const { apiKey, baseUrl } = getConfig(init?.apiKey);
+  const fetchInit = { ...(init ?? {}) } as RequestInit & {
+    apiKey?: string;
+    baseUrl?: string;
+  };
+  delete fetchInit.apiKey;
+  delete fetchInit.baseUrl;
+  const response = await fetch(`${init?.baseUrl ?? baseUrl}${path}`, {
+    ...fetchInit,
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
-      ...init?.headers,
+      ...fetchInit.headers,
     },
   });
 
@@ -126,15 +132,25 @@ export async function getAgentProfile(): Promise<BandAgentProfile> {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function createRoom(taskId?: string): Promise<BandChatRoom> {
-  const payload =
-    taskId && UUID_RE.test(taskId)
-      ? { chat: { task_id: taskId } }
-      : { chat: {} };
+export async function createRoom(options?: {
+  taskId?: string;
+  title?: string;
+  apiKey?: string;
+}): Promise<BandChatRoom> {
+  const chat: Record<string, unknown> = {};
+
+  if (options?.taskId && UUID_RE.test(options.taskId)) {
+    chat.task_id = options.taskId;
+  }
+
+  if (options?.title?.trim()) {
+    chat.title = options.title.trim();
+  }
 
   const raw = await bandFetch<unknown>("/agent/chats", {
     method: "POST",
-    body: JSON.stringify(payload),
+    apiKey: options?.apiKey,
+    body: JSON.stringify({ chat }),
   });
 
   return requireId(
@@ -228,9 +244,14 @@ export async function postEvent(
   roomId: string,
   eventType: string,
   payload: Record<string, unknown>,
+  apiKeyOverride?: string,
 ): Promise<unknown> {
+  const { apiKey, baseUrl } = getConfig(apiKeyOverride);
+
   return bandFetch(`/agent/chats/${roomId}/events`, {
     method: "POST",
+    apiKey,
+    baseUrl,
     body: JSON.stringify({
       event: {
         message_type: eventType,
@@ -245,6 +266,18 @@ export async function postEvent(
 }
 
 export async function getRoomHistory(roomId: string): Promise<BandMessageRecord[]> {
+  try {
+    return await fetchRoomContext(roomId);
+  } catch (error) {
+    // Orchestrator rooms post via /events; Band may not expose /context for them yet.
+    if (error instanceof BandApiError && error.status === 404) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function fetchRoomContext(roomId: string): Promise<BandMessageRecord[]> {
   const data = await bandFetch<unknown>(`/agent/chats/${roomId}/context`);
 
   const unwrapped = unwrapBandResource<unknown>(data);

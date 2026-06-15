@@ -33,7 +33,7 @@ Rules:
 - You must NOT re-argue transcript semantics or assign business/customer severity.
 - If conversation_analysis says appears_resolved but execution failed, set contradicts_msg_id to conversation_analysis_msg_id and explain in contradiction_reason_en.
 - If execution failed and behavioral_hints show premature_closure, set contradicts_msg_id even when conversation_verdict is appears_unresolved or ambiguous.
-- Write in English except when quoting values_as_spoken from structured fields.
+- If crm_context is provided, use it to cross-check identity (birth_date, phone, vnr) against execution failures like check_birthday.
 - Return valid JSON matching the schema exactly.
 
 Output schema:

@@ -2,112 +2,175 @@
 
 Read this before every build session. If a feature does not serve this doc, do not build it.
 
----
-
-## Primary question
-
-**Where did this voice AI call fail?**
-
-Answer format: **layer + failure class + evidence** (with MSG IDs in Band).
+**Last updated:** 15 Jun 2026 — **Cause Room + Localization Room + Cause Revision loop** locked
 
 ---
 
-## Secondary questions (optional, never primary)
+## Default demo path vs wow capability
 
-- Is this failure **recurring** for this customer or workflow? (pattern layer)
-- Which **fix surface** does engineering own? (integration, prompt, confirm-after-tool policy)
+| Path | What ships |
+|------|------------|
+| **Default (hackathon)** | **Room 1 Cause Finding v1** → **Room 2 Localization** → ranked `suspect_surfaces` |
+| **Wow (if time + artifacts)** | Localization sends **Cause Revision Request** back to Causal Judge when implementation evidence contradicts the causal story |
 
----
+**Not a pipeline.** Separate investigation spaces with a **controlled feedback loop**.
 
-## Forbidden primary outputs
+### Cause Revision Request (Room 2 → Causal Judge)
 
-Do not make these the main deliverable:
+When Localization finds contradictory implementation evidence:
 
-- CS escalation playbooks ("callback within 2 hours", "open P1 ticket")
-- "What should customer service do now?"
-- Transcript summary or call quality score without execution cross-check
-- Single-agent verdict on "was the call good?"
+1. Room 2 sends **Cause Revision Request** to Causal Judge  
+2. Causal Judge responds **HOLD_FINDING** or **REVISE_FINDING**  
+3. Room 2 continues with updated Cause Finding v2  
 
----
-
-## Who this is for
-
-| User | Yes |
-|------|-----|
-| Voice AI operator / QA / workflow owner debugging calls | Yes |
-| Engineer sitting next to the workflow at the lounge | Yes |
-| Human ticket-queue agent routing CS work | No (not primary) |
-
-**Customer service** in this project means **customer-facing phone calls** (the channel), not the product user.
+**Klaus rule:** Do **not** force a revision twist unless artifacts clearly support it (e.g. workflow shows success branch before API validation, tool schema swallows 504). Otherwise judges will feel you invented the twist. Default Klaus demo = Cause → Localization **without** revision unless fake schema/workflow is explicit in fixtures.
 
 ---
 
-## The four agents (locked roles)
+## Hook (what judges should repeat)
 
-| Agent | Question |
-|-------|----------|
-| Conversation Analyst | What did the **conversation layer** assert or imply? |
-| Outcome Investigator | What did **execution** actually do? |
-| Pattern Analyst | Is this failure **recurring**? |
-| Failure Synthesizer | **Where** did it fail, **what class**, **which layer owns the fix?** (Band only) |
+**The customer was told it worked. Did it actually work?**
+
+Then: **Where in the agent system is that behavior coming from?**
 
 ---
 
-## Failure layers and classes
+## Two-room architecture (locked)
 
-| Layer | Example modes |
-|-------|----------------|
-| L1 Conversation | Wrong intent, misunderstood entity, hallucinated confirmation, premature verbal closure |
-| L2 Execution | Tool not called, parameter drift, API timeout, silent tool error, workflow continued after error, **failure-driven handoff** (ticket/email after prior failure) |
-| L3 Pattern | Same failure on prior calls, regression, recurring customer/workflow hit |
-| Synthesis | Combined root cause, cited MSG IDs, fix surface |
+| Room | Question | Output |
+|------|----------|--------|
+| **Room 1 — Cause Room** | What happened in this incident? | **Cause Finding** (cause, evidence, ruled out, evolution, `recurrence_hint_request`) |
+| **Room 2 — Localization Room** | Where in the stack is this behavior most likely coming from? | **Ranked suspect surfaces** + investigation target *(post-hackathon unless time)* |
 
----
+**Room 2 is localization, not fixing.** No auto-patches in the demo.
 
-## Drift checklist (before merging)
+### Canonical layer (locked)
 
-- [ ] Does this require execution data, not transcript alone?
-- [ ] Does this name a failure **layer** or **class**?
-- [ ] Would a Pflegemittelbox QA person use this at the workflow lounge?
-- [ ] Is Band structurally necessary (not just a log dump)?
-- [ ] Is the main output **not** a CS playbook?
+- **Mechanism** generalizes across platforms (`confirmation_before_backend_success`, …)
+- **Surface** localizes to a native pointer (Leaping stage, LangGraph node, …)
+- **surface_type** enum: `workflow_branch`, `dialogue_stage`, `prompt_policy`, `tool_contract`, `confirmation_guard`, `state_transition`, `error_handler`
 
 ---
 
-## Naming guide
+## Band agents — locked identities
 
-**Use:** failure autopsy, operator, voice AI QA, Pattern Analyst, Failure Synthesizer, where did it fail
+### Room 1 — do not recreate (already registered)
 
-**Avoid as product center:** Service Commander, CS escalation, ticket triage, "what should CS do"
+| Band name | Env key | Role |
+|-----------|---------|------|
+| Claim Tracer | `BAND_API_KEY_CLAIM_TRACER` | Conversation evidence only |
+| Backend Witness | `BAND_API_KEY_BACKEND_WITNESS` | Execution evidence only |
+| Causal Judge | `BAND_API_KEY_CAUSAL_JUDGE` | Bridge + Cause Finding |
+
+### Room 2 — create these 4 Band agents now
+
+| Band name | Env key | Access | Question |
+|-----------|---------|--------|----------|
+| **Control Flow Investigator** | `BAND_API_KEY_CONTROL_FLOW_INVESTIGATOR` | Workflow graph, branches, transitions, state changes | What execution path could emit this behavior? |
+| **Policy Investigator** | `BAND_API_KEY_POLICY_INVESTIGATOR` | System prompt, stage prompts, confirmation rules | What instruction or policy permits this behavior? |
+| **Guard Investigator** | `BAND_API_KEY_GUARD_INVESTIGATOR` | Tool schemas, success criteria, error handling | What missing guard allows this behavior? |
+| **Localization Judge** | `BAND_API_KEY_LOCALIZATION_JUDGE` | Surface candidates from Band thread only | What implementation mechanism + primary surface survives? |
+
+Room creator for Localization Room: **Control Flow Investigator** key (mirrors Claim Tracer owning Cause Room).
+
+Investigators post `surface_candidate` artifacts. Judge posts `LocalizationFinding` with `implementation_mechanism` + `primary_surface`.
 
 ---
 
-## Demo north star (Klaus)
+## Room 1 — Cause Room ✅ live on localhost + Band
 
-Verbal callback confirmed at T05 (L1) + `create_callback_appointment` 504 + no appointment (L2).
+Three agents with **hard evidence walls** and **two challenge rounds** minimum.
 
-Demo ends on **cross-layer failure location**, not "escalate Klaus."
+| Agent | Domain | Cannot see |
+|-------|--------|------------|
+| **Claim Tracer** | Transcript, customer belief, agent wording | Tool calls, API results, backend state |
+| **Backend Witness** | Tool invocations, status codes, side effects, workflow | Transcript quotes as primary evidence |
+| **Causal Judge** | Both agents' Band posts + cited evidence | Raw feeds unless cited |
+
+### Collaboration rules (non-negotiable)
+
+1. **Final cause ≠ any agent's opening hypothesis**
+2. **Two challenge rounds** — CT and BW must CHALLENGE / SUPPORT / YIELD with visible `opinion_changed`
+3. **Causal Judge introduces bridge hypotheses** — not refereeing winners
+4. **Cause Finding includes `evolution[]`** — proof collaboration happened
+5. **`recurrence_hint_request: true`** when orchestrator should enrich before Room 2
+
+### Klaus arc (demo script)
+
+| Step | Room shows |
+|------|------------|
+| CT | Customer believes callback booked; agent confirmed |
+| BW | `create_callback_appointment` → **504**, no appointment |
+| CJ | Rules out pure hallucination + API-only → **premature confirmation after failed scheduling API** |
+| CT | YIELD / NARROW (round 1 + 2) |
+| BW | NARROW to include customer-facing continuation (round 1 + 2) |
+| Verdict | Cause Finding + evolution + recurrence hint |
+
+### Band post sequence (9 posts)
+
+1. Claim Tracer initial  
+2. Backend Witness initial  
+3. Causal Judge bridge (round 1)  
+4. Claim Tracer challenge (round 1)  
+5. Backend Witness challenge (round 1)  
+6. Causal Judge bridge (round 2)  
+7. Claim Tracer challenge (round 2)  
+8. Backend Witness challenge (round 2)  
+9. Cause Finding  
+
+**Localhost:** `http://localhost:3000` → open incident → **Run Cause Room** (~60s)
+
+**Dev API:** `POST /api/dev/investigate-cause-room` with `{ "fixture": "hero-klaus-minimal" }`
+
+**Band:** Rooms named `{incident_id} · {title}`. Posts are **readable English**; full JSON in metadata.
 
 ---
 
-## Direct action vs colleague handoff (critical)
+## Room 2 — Localization Room
 
-Voice agents often **do not solve** the request themselves. Incident Room must separate:
+**Input:** `CauseFinding` artifact + platform agent artifact (via adapter)
 
-| Path | Meaning | Example |
-|------|---------|---------|
-| **Direct action** | Backend tool fulfills the request | CRM address update, book callback |
-| **Handoff to colleagues** | Ticket/email/escalation for humans | `send_email`, create ticket |
+**Goal:** Discover the **implementation mechanism** that explains why the CauseFinding was possible — not rank surfaces.
 
-For handoffs, always ask **why**:
+**Output:** `LocalizationFinding` with `implementation_mechanism`, `mechanism_explanation`, `primary_surface` (evidence pointer), `supporting_surfaces`
 
-| handoff_reason | Meaning |
-|----------------|---------|
-| **capability_by_design** | Workflow has no direct-action tool; handoff is the designed path |
-| **failure_driven_escalation** | Something failed first (identity, lookup, API), *then* handoff — not the happy path |
-| **policy_constraint** | After-hours, closed queue, etc. |
-| **customer_requested_human** | Caller asked for a person |
+**Sequence (memorable arc):**
+1. Control Flow Investigator — opening surface theory
+2. Policy Investigator — **attacks** opening as incomplete
+3. Guard Investigator — **attacks** redirect as incomplete
+4. Mechanism Judge — eliminates incomplete explanations
+5. Mechanism Judge — **discovers mechanism** none proposed initially (e.g. Schritt 1 before Schritt 3)
+6. Mechanism Judge — localizes mechanism to primary surface + supporting evidence
 
-**`send_email` success ≠ customer outcome achieved** if identity failed or the actual order/fix never ran.
+**15-second judge moment:** Three specialists disagreed on the culprit surface, but together uncovered a deeper implementation mechanism none of them proposed initially.
 
-This taxonomy is **platform-agnostic** — derived from `function_calls` in `VoiceIncidentEvidence`, not Leaping-specific fields.
+Mechanism generalizes (`confirmation_before_backend_success`). Pointer localizes (`Anliegenaufnahme + Email`).
+
+Recurrence is a **handoff field**, not a third room:
+```json
+{ "similar_incidents_last_30_days": 4, "shared_signals": ["504 on handoff tool"] }
+```
+
+---
+
+## Demo north star (Klaus — Video B)
+
+Human line: *"Great, thanks for booking the callback."*  
+Tool: `create_callback_appointment` → **504**  
+Cause: premature confirmation after failed scheduling API  
+Localization (if shipped): `confirmation_policy` vs `success_branch`
+
+---
+
+## Kill list (hackathon sprint)
+
+- Chat platform / SSE dashboard polish before Cause Room runs on Klaus  
+- Auto-fix / code patches  
+- Full Evaluator Room as separate room  
+- Cross-platform normalizer in pitch  
+
+---
+
+## Legacy (still in repo, not primary)
+
+Old **Conversation Analyst → Outcome Investigator** linear pipeline remains at `/api/dev/investigate-two` for comparison.

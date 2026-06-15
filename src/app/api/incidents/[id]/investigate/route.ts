@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { runTwoAgentInvestigation } from "@/lib/orchestrator/run-two-agent-investigation";
+import { resolveCrmForEvidence } from "@/lib/crm/lookup";
+import { runFullIncidentInvestigation } from "@/lib/orchestrator/run-full-incident-investigation";
 import {
   completeInvestigation,
   failInvestigation,
@@ -22,38 +23,73 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const run = startInvestigation(params.id);
 
   try {
-    const result = await runTwoAgentInvestigation(incident.evidence);
+    const crm = resolveCrmForEvidence(incident.evidence);
+    const result = await runFullIncidentInvestigation(incident.evidence);
 
-    const contradiction = {
-      detected:
-        result.outcomeAnalysis.contradicts_msg_id !== null ||
-        (result.conversationAnalysis.conversation_verdict ===
-          "appears_resolved" &&
-          result.outcomeAnalysis.execution_verdict === "outcome_failed"),
-      contradicts_msg_id: result.outcomeAnalysis.contradicts_msg_id,
-      reason: result.outcomeAnalysis.contradiction_reason_en,
+    const causeRoom = {
+      distinctBandAgents: result.cause.distinctBandAgents,
+      bandMessageIds: result.cause.bandMessageIds,
+      claimTracerInitial: result.cause.claimTracerInitial,
+      backendWitnessInitial: result.cause.backendWitnessInitial,
+      claimTracerChallenge1: result.cause.claimTracerChallenge1,
+      backendWitnessChallenge1: result.cause.backendWitnessChallenge1,
+      causalJudgeTask: result.cause.causalJudgeTask,
+      causalJudgeBridge: result.cause.causalJudgeBridge,
+      claimTracerChallenge2: result.cause.claimTracerChallenge2,
+      backendWitnessChallenge2: result.cause.backendWitnessChallenge2,
+      causalJudgeRefinement: result.cause.causalJudgeRefinement,
+      causeFinding: result.cause.causeFinding,
+      causeFindingArtifact: result.cause.causeFindingArtifact,
+      revisionDecision: result.cause.revisionDecision,
+      feedTimeline: result.cause.feedTimeline,
+    };
+
+    const localizationRoom = {
+      distinctBandAgents: result.localization.distinctBandAgents,
+      roomId: result.localization.roomId,
+      causeRoomId: result.localization.causeRoomId,
+      inputCauseFindingArtifact: result.localization.inputCauseFindingArtifact,
+      phase: result.localization.phase,
+      causeDefenseRequest: result.localization.causeDefenseRequest,
+      causeDefenseDecision: result.localization.causeDefenseDecision,
+      localizationDefenseVerdict: result.localization.localizationDefenseVerdict,
+      causeRevisionRequest: result.localization.causeRevisionRequest,
+      pendingCauseRevision: result.localization.pendingCauseRevision,
+      arc: result.localization.arc,
+      surfaceCandidates: result.localization.surfaceCandidates,
+      localizationFinding: result.localization.localizationFinding,
+      localizationFindingArtifact: result.localization.localizationFindingArtifact,
+      investigationBreakthrough: result.localization.investigationBreakthrough,
+      feedTimeline: result.localization.feedTimeline,
+      bandMessageIds: result.localization.bandMessageIds,
     };
 
     const completed = completeInvestigation(params.id, run.id, {
-      roomId: result.roomId,
-      bandMessageIds: result.bandMessageIds,
-      conversationAnalysis: result.conversationAnalysis,
-      outcomeAnalysis: result.outcomeAnalysis,
-      contradiction,
+      pipeline: "full",
+      roomId: result.cause.roomId,
+      localizationRoomId: result.localization.roomId,
+      distinctBandAgents: result.cause.distinctBandAgents,
+      distinctLocalizationAgents: result.localization.distinctBandAgents,
+      bandMessageIds: result.cause.bandMessageIds,
+      causeRoom,
+      localizationRoom,
+      crmLink: crm.link,
+      crmLookup: crm.lookup,
     });
 
     return NextResponse.json({
       ok: true,
       run: completed,
-      roomId: result.roomId,
-      bandMessageIds: result.bandMessageIds,
-      conversationAnalysis: result.conversationAnalysis,
-      outcomeAnalysis: result.outcomeAnalysis,
-      contradiction,
-      historyCount: result.history.length,
+      causeRoomId: result.cause.roomId,
+      localizationRoomId: result.localization.roomId,
+      causeFinding: result.cause.causeFinding,
+      localizationFinding: result.localization.localizationFinding,
+      crmLink: crm.link,
+      crmLookup: crm.lookup,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Investigation failed";
+    const message =
+      error instanceof Error ? error.message : "Investigation failed";
     const failed = failInvestigation(params.id, run.id, message);
     return NextResponse.json(
       { ok: false, error: message, run: failed },

@@ -23,9 +23,9 @@ function applyConversationVerdictFallback(
     return result;
   }
 
-  const notableTurns = [
-    ...new Set([...(result.notable_turns ?? []), ...closureTurns]),
-  ];
+  const notableTurns = Array.from(
+    new Set([...(result.notable_turns ?? []), ...closureTurns]),
+  );
 
   return {
     ...result,

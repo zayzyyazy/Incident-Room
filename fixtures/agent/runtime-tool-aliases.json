@@ -1,0 +1,10 @@
+{
+  "PMB-2024-0847": {
+    "platform": "leaping",
+    "artifact": "pflegemittelbox-klaus-slice",
+    "aliases": {
+      "lookup_customer": "get_customer_by_insurance_number",
+      "create_callback_appointment": "send_email"
+    }
+  }
+}
