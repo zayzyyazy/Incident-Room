@@ -1,0 +1,5 @@
+order_id,user_id,status,eta,carrier,tracking_number,total_cents,currency,refundable,refund_status,customer_name,customer_email,last_updated
+ORD-12345,customer_123,shipped,2 days,FedEx,1Z999AA10123456784,4999,USD,true,none,Klaus Meyer,klaus@example.com,2026-06-15T17:45:00Z
+ORD-67890,customer_123,processing,5 days,UPS,1Z999AA10987654321,12999,USD,true,none,Maria Santos,maria@example.com,2026-06-15T16:05:00Z
+ORD-11111,customer_123,delivered,delivered yesterday,USPS,9400111899560000000000,7999,USD,false,window_closed,Anissa Khan,anissa@example.com,2026-06-14T09:30:00Z
+ORD-22222,customer_456,exception,unknown,DHL,JD014600006993000000,5999,USD,true,manual_review,Robin Lee,robin@example.com,2026-06-15T18:00:00Z

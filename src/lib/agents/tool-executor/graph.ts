@@ -18,6 +18,10 @@ const GraphState = Annotation.Root({
     reducer: (left, right) => right,
     default: () => "",
   }),
+  toolCalls: Annotation<any[]>({
+    reducer: (left, right) => right,
+    default: () => [],
+  }),
 });
 
 export type GraphStateType = typeof GraphState.State;
@@ -53,6 +57,7 @@ export async function runToolExecutor(
       userId: input.userId,
       decision: input.decision,
       result: "",
+      toolCalls: [],
     },
     config
   );

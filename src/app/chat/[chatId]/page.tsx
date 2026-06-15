@@ -9,6 +9,13 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   tools_called?: ToolCall[];
+  toolsCalled?: ToolCall[];
+  roomId?: string;
+  workflowTrace?: any[];
+  analyzer?: any;
+  evidence?: any;
+  investigationInput?: any;
+  incident?: any;
   timestamp: Date;
 }
 
@@ -69,6 +76,7 @@ const loadChatHistory = async () => {
     if (data.messages && data.messages.length > 0) {
       const formattedMessages = data.messages.map((msg: any) => ({
         ...msg,
+        tools_called: msg.tools_called ?? msg.toolsCalled ?? [],
         timestamp: new Date(msg.timestamp)
       }));
       console.log("✅ Setting messages:", formattedMessages.length);
@@ -126,6 +134,13 @@ const loadChatHistory = async () => {
       role: 'assistant' as const,
       content: data.reply,
       tools_called: data.tools_called || [],
+      toolsCalled: data.tools_called || [],
+      roomId: data.roomId,
+      workflowTrace: data.workflow_trace || [],
+      analyzer: data.analyzer,
+      evidence: data.evidence,
+      investigationInput: data.investigation_input,
+      incident: data.incident,
       timestamp: new Date()
     };
 
@@ -141,7 +156,13 @@ const loadChatHistory = async () => {
         role: 'assistant',
         content: data.reply,
         intent: data.intent,
-        toolsCalled: data.tools_called
+        toolsCalled: data.tools_called,
+        roomId: data.roomId,
+        workflowTrace: data.workflow_trace,
+        analyzer: data.analyzer,
+        evidence: data.evidence,
+        investigationInput: data.investigation_input,
+        incident: data.incident
       })
     });
 

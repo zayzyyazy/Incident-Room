@@ -1,7 +1,7 @@
 // app/api/chat-history/[chatId]/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { buildChatEvidence, StoredChatMessage } from "@/lib/chat/evidence";
 
 export async function GET(
   request: Request,
@@ -23,9 +23,36 @@ export async function GET(
       .sort({ timestamp: 1 })
       .toArray();
 
+    const storedMessages: StoredChatMessage[] = messages.map((message: any) => ({
+      role: message.role,
+      content: message.content,
+      timestamp: message.timestamp,
+      intent: message.intent,
+      toolsCalled: message.toolsCalled ?? [],
+      roomId: message.roomId,
+      analyzer: message.analyzer,
+      workflowTrace: message.workflowTrace,
+    }));
+    const latestRichMessage = [...messages]
+      .reverse()
+      .find((message: any) => message.evidence || message.analyzer || message.incident);
+    const userId = messages.find((message: any) => message.userId)?.userId ?? "customer_123";
+    const evidence =
+      latestRichMessage?.evidence ??
+      buildChatEvidence(storedMessages, {
+        chatId,
+        userId,
+        roomId: latestRichMessage?.roomId,
+        analyzer: latestRichMessage?.analyzer,
+      });
+
     return NextResponse.json({ 
       chat_id: chatId, 
-      messages: messages 
+      messages,
+      evidence,
+      investigation_input: { evidence },
+      latest_analyzer: latestRichMessage?.analyzer ?? null,
+      latest_incident: latestRichMessage?.incident ?? null,
     });
     
   } catch (error) {
@@ -48,8 +75,8 @@ export async function DELETE(
     }
 
     const client = await clientPromise;
-    const db = client.db("chatdb");
-    const collection = db.collection("messages");
+    const db = client.db("bands_hackathondb");
+    const collection = db.collection("chats");
 
     const result = await collection.deleteMany({ chatId });
 
