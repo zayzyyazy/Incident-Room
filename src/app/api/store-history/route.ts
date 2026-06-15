@@ -1,6 +1,6 @@
 // app/api/store-history/route.ts
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import getMongoClient from "@/lib/mongodb";
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const client = await clientPromise;
+    const client = await getMongoClient();
     const db = client.db("bands_hackathondb");
     const collection = db.collection("chats");
 
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Failed to store chat history:", error);
     return NextResponse.json({ error: "Failed to store message" }, { status: 500 });
   }
 }

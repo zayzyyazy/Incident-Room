@@ -5,7 +5,11 @@ import { createRoom, postMessage, formatBandPost, getRoomHistory } from "@/lib/b
 import { runSupervisor } from "@/lib/agents/supervisor/graph";
 import { runDoer } from "@/lib/agents/doer/graph";
 import { runToolExecutor } from "@/lib/agents/tool-executor/graph";
-import { buildChatEvidence, StoredChatMessage } from "@/lib/chat/evidence";
+import {
+  buildChatEvidence,
+  StoredChatMessage,
+  StoredToolCall,
+} from "@/lib/chat/evidence";
 import { upsertIncidentFromEvidence } from "@/lib/incidents/store";
 
 type WorkflowTraceEntry = {
@@ -24,25 +28,51 @@ type EndAnalyzerResult = {
   signals: string[];
 };
 
+type SupportDecision = {
+  action?: string;
+  tool?: string;
+  params?: Record<string, unknown>;
+  response?: string;
+  reasoning?: string;
+};
+
 function nowIso() {
   return new Date().toISOString();
 }
 
-function normalizeMessage(message: any): StoredChatMessage {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeMessage(message: unknown): StoredChatMessage {
+  const record = isRecord(message) ? message : {};
+  const role = record.role === "assistant" || record.role === "user"
+    ? record.role
+    : "system";
+
   return {
-    role: message.role === "assistant" || message.role === "user" ? message.role : "system",
-    content: String(message.content ?? ""),
-    timestamp: message.timestamp ?? nowIso(),
-    intent: message.intent ?? null,
-    toolsCalled: message.toolsCalled ?? message.tools_called ?? [],
-    roomId: message.roomId,
-    analyzer: message.analyzer,
-    workflowTrace: message.workflowTrace,
+    role,
+    content: String(record.content ?? ""),
+    timestamp:
+      typeof record.timestamp === "string" || record.timestamp instanceof Date
+        ? record.timestamp
+        : nowIso(),
+    intent: typeof record.intent === "string" ? record.intent : null,
+    toolsCalled: Array.isArray(record.toolsCalled)
+      ? (record.toolsCalled as StoredToolCall[])
+      : Array.isArray(record.tools_called)
+        ? (record.tools_called as StoredToolCall[])
+        : [],
+    roomId: typeof record.roomId === "string" ? record.roomId : undefined,
+    analyzer: isRecord(record.analyzer) ? record.analyzer : undefined,
+    workflowTrace: Array.isArray(record.workflowTrace)
+      ? record.workflowTrace
+      : undefined,
   };
 }
 
 function appendCurrentUserMessage(
-  conversationHistory: any[] | undefined,
+  conversationHistory: unknown[] | undefined,
   message: string,
 ): StoredChatMessage[] {
   const history = (conversationHistory ?? []).map(normalizeMessage);
@@ -63,7 +93,7 @@ function appendCurrentUserMessage(
   ];
 }
 
-function toolSignals(toolsCalled: any[]) {
+function toolSignals(toolsCalled: StoredToolCall[]) {
   return toolsCalled.flatMap((tool) => {
     const result = String(tool.result ?? "").toLowerCase();
     const signals: string[] = [];
@@ -91,8 +121,8 @@ function toolSignals(toolsCalled: any[]) {
 function analyzeEndOfChat(input: {
   messages: StoredChatMessage[];
   intent: string;
-  decision: any;
-  toolsCalled: any[];
+  decision: SupportDecision;
+  toolsCalled: StoredToolCall[];
   finalReply: string;
 }): EndAnalyzerResult {
   const latestUserText =
@@ -140,7 +170,7 @@ function analyzeEndOfChat(input: {
   return {
     chatEnded,
     shouldInvestigate,
-    signals: [...new Set(signals)],
+    signals: Array.from(new Set(signals)),
     reason: chatEnded
       ? shouldInvestigate
         ? "Chat is closed and contains refund, handoff, or unresolved tool signals."
@@ -167,14 +197,14 @@ export async function POST(request: Request) {
 
     const trace: WorkflowTraceEntry[] = [];
 
-    async function postAgentStep(
+    const postAgentStep = async (
       roomId: string,
       step: string,
       agent: string,
       event: string,
       payload: unknown,
       metadata: Record<string, unknown> = {},
-    ) {
+    ) => {
       const posted = await postMessage(
         roomId,
         formatBandPost(agent, event, payload),
@@ -189,7 +219,7 @@ export async function POST(request: Request) {
         payload,
       });
       return posted;
-    }
+    };
 
     // Each chat turn uses Band as the blackboard that agents post to and read from.
     const room = await createRoom();
@@ -256,7 +286,7 @@ export async function POST(request: Request) {
       },
       threadId
     );
-    const decision = doerResult.decision;
+    const decision = (doerResult.decision ?? {}) as SupportDecision;
     console.log(`✅ Decision: ${decision?.action}${decision?.tool ? ` - Tool: ${decision.tool}` : ''}`);
     console.log(`   Reasoning: ${decision?.reasoning || 'N/A'}`);
 
@@ -267,7 +297,7 @@ export async function POST(request: Request) {
 
     // Step 3: Tool executor runs if needed using LangGraph
     let finalReply = "";
-    let toolsCalled: any[] = [];
+    let toolsCalled: StoredToolCall[] = [];
 
     if (decision?.action === "call_tool") {
       console.log(`\n📝 Step 3: ToolExecutor (LangGraph) running ${decision.tool}...`);
@@ -294,8 +324,8 @@ export async function POST(request: Request) {
         toolResult.toolCalls?.length > 0
           ? toolResult.toolCalls
           : [{
-              name: decision.tool,
-              arguments: decision.params,
+              name: decision.tool ?? "unknown_tool",
+              arguments: decision.params ?? {},
               result: finalReply,
               status: "success",
             }];

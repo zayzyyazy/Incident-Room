@@ -1,6 +1,19 @@
 // src/lib/agents/doer/nodes.ts
 export const DOER_NODE = "doer";
 
+type AgentMessage = {
+  role: string;
+  content: string;
+};
+
+type DoerState = {
+  messages: AgentMessage[];
+  roomId: string;
+  userId: string;
+  intent: string;
+  decision?: Record<string, unknown> | null;
+};
+
 function extractOrderIdFromMessages(messages: Array<{ role: string; content: string }>) {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
@@ -14,10 +27,10 @@ function extractOrderIdFromMessages(messages: Array<{ role: string; content: str
   return null;
 }
 
-export async function doerNode(state: any) {
+export async function doerNode(state: DoerState) {
   const intent = state.intent || "unknown";
   const latestUserMessage =
-    [...state.messages].reverse().find((msg: any) => msg.role === "user")
+    [...state.messages].reverse().find((msg) => msg.role === "user")
       ?.content || "";
   const extractedOrderId = extractOrderIdFromMessages(state.messages);
   

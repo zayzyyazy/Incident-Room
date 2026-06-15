@@ -5,6 +5,14 @@ import { StateGraph, START, END, MemorySaver, Annotation } from "@langchain/lang
 import { doerNode, DOER_NODE } from "./nodes";
 import { randomUUID } from "crypto";
 
+type DoerDecision = {
+  action?: string;
+  tool?: string;
+  params?: Record<string, unknown>;
+  response?: string;
+  reasoning?: string;
+};
+
 // Define the state
 const GraphState = Annotation.Root({
   messages: Annotation<Array<{ role: string; content: string }>>({
@@ -14,7 +22,7 @@ const GraphState = Annotation.Root({
   roomId: Annotation<string>(),
   userId: Annotation<string>(),
   intent: Annotation<string>(),
-  decision: Annotation<any>({
+  decision: Annotation<DoerDecision | null>({
     reducer: (left, right) => right,
     default: () => null,
   }),

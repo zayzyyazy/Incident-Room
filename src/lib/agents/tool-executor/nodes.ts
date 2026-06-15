@@ -19,13 +19,27 @@ type OrderRecord = {
   last_updated: string;
 };
 
-type ToolExecution = {
+export type ToolExecution = {
   name: string;
   arguments: Record<string, unknown>;
   result: unknown;
   status: "success" | "error" | "timeout";
   startedAt: string;
   completedAt: string;
+};
+
+type ToolExecutorState = {
+  messages: Array<{ role: string; content: string }>;
+  roomId: string;
+  userId: string;
+  decision?: {
+    action?: string;
+    tool?: string;
+    params?: Record<string, unknown>;
+    response?: string;
+  } | null;
+  result: string;
+  toolCalls: ToolExecution[];
 };
 
 function normalizeOrderId(orderId?: string) {
@@ -200,7 +214,7 @@ export async function executeSupportTool(
   }
 }
 
-export async function toolExecutorNode(state: any) {
+export async function toolExecutorNode(state: ToolExecutorState) {
   const decision = state.decision;
   let result = "Tool execution failed";
   let toolCall: ToolExecution | null = null;

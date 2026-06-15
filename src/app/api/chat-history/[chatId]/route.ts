@@ -1,7 +1,14 @@
 // app/api/chat-history/[chatId]/route.ts
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import getMongoClient from "@/lib/mongodb";
 import { buildChatEvidence, StoredChatMessage } from "@/lib/chat/evidence";
+
+type ChatHistoryDocument = StoredChatMessage & {
+  userId?: string;
+  evidence?: unknown;
+  incident?: unknown;
+  investigationInput?: unknown;
+};
 
 export async function GET(
   request: Request,
@@ -14,7 +21,7 @@ export async function GET(
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
-    const client = await clientPromise;
+    const client = await getMongoClient();
     const db = client.db("bands_hackathondb");
     const collection = db.collection("chats");
 
@@ -23,7 +30,8 @@ export async function GET(
       .sort({ timestamp: 1 })
       .toArray();
 
-    const storedMessages: StoredChatMessage[] = messages.map((message: any) => ({
+    const typedMessages = messages as unknown as ChatHistoryDocument[];
+    const storedMessages: StoredChatMessage[] = typedMessages.map((message) => ({
       role: message.role,
       content: message.content,
       timestamp: message.timestamp,
@@ -33,10 +41,10 @@ export async function GET(
       analyzer: message.analyzer,
       workflowTrace: message.workflowTrace,
     }));
-    const latestRichMessage = [...messages]
+    const latestRichMessage = [...typedMessages]
       .reverse()
-      .find((message: any) => message.evidence || message.analyzer || message.incident);
-    const userId = messages.find((message: any) => message.userId)?.userId ?? "customer_123";
+      .find((message) => message.evidence || message.analyzer || message.incident);
+    const userId = typedMessages.find((message) => message.userId)?.userId ?? "customer_123";
     const evidence =
       latestRichMessage?.evidence ??
       buildChatEvidence(storedMessages, {
@@ -74,7 +82,7 @@ export async function DELETE(
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
-    const client = await clientPromise;
+    const client = await getMongoClient();
     const db = client.db("bands_hackathondb");
     const collection = db.collection("chats");
 

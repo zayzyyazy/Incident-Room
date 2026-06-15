@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Fri 13 Jun 2026, ~night):** Phase 0–1 **demo-ready**. Three failure archetypes working in UI: direct action fail (Maria/Klaus), failure-driven handoff (Anissa). Pattern Analyst + Failure Synthesizer still TODO.
+**Status (as of Mon 15 Jun 2026, 18:39 UTC):** Phase 0–1 demo is still working, and reply chat now routes agent handoffs through Band, records tool calls/history, and can turn ended support chats into dashboard incidents.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Mon 15 Jun 2026 — 18:39 — Reply chat now feeds investigations
+
+**What happened:** Reworked reply chat so Customer, Supervisor, Doer, Tool Executor, Assistant, and End Analyzer all post their handoffs/results through Band.
+**Problem (if any):** Chat replies were not producing the same evidence shape as incident investigations, and tool calls were static mocks.
+**Fix / result:** Added CSV-backed order/refund/human-handoff tools, saved workflow traces in chat history, generated `VoiceIncidentEvidence` from chats, and registered ended refund/handoff/problem chats on the dashboard.
+
+---
 
 ### Fri 13 Jun 2026 — ~night — Full UI test pass 🎉🎉
 
@@ -179,6 +187,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 - [x] Anissa real Leaping case — failure-driven handoff taxonomy in UI
 - [x] Handoff vs direct action distinction (capability vs failure-driven)
 - [x] Three demo archetypes: Klaus, Maria, Anissa
+- [x] Reply chat can create investigation-ready evidence and dashboard incidents
 - [x] Clear product lock in `PRODUCT.md`
 - [x] GitHub repo live
 

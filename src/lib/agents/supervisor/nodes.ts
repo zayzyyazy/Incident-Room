@@ -2,6 +2,18 @@ import { ChatOpenAI } from "@langchain/openai";
 export const SUPERVISOR_NODE = "supervisor";
 // src/lib/agents/supervisor/nodes.ts
 
+type AgentMessage = {
+  role: string;
+  content: string;
+};
+
+type SupervisorState = {
+  messages: AgentMessage[];
+  roomId: string;
+  userId: string;
+  intent: string;
+};
+
 function classifyIntentFromText(text: string) {
   const lowered = text.toLowerCase();
   if (/\b(thanks|thank you|bye|goodbye|that's all|that is all|resolved|done)\b/.test(lowered)) {
@@ -22,12 +34,12 @@ function classifyIntentFromText(text: string) {
   return "unknown";
 }
 
-export async function supervisorNode(state: any) {
+export async function supervisorNode(state: SupervisorState) {
   // Get all messages except the last assistant response
-  const conversationMessages = state.messages.filter((msg: any) => msg.role !== 'assistant' || !msg.content.includes('Intent detected'));
+  const conversationMessages = state.messages.filter((msg) => msg.role !== 'assistant' || !msg.content.includes('Intent detected'));
   const latestUserMessage = [...conversationMessages]
     .reverse()
-    .find((msg: any) => msg.role === "user")?.content ?? "";
+    .find((msg) => msg.role === "user")?.content ?? "";
 
   if (!process.env.AIMLAPI_KEY && !process.env.BAND_API_KEY) {
     const fallbackIntent = classifyIntentFromText(latestUserMessage);
@@ -52,7 +64,7 @@ export async function supervisorNode(state: any) {
   const prompt = `Analyze the user's intent from the conversation below.
   
 Conversation history:
-${conversationMessages.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')}
+${conversationMessages.map((msg) => `${msg.role}: ${msg.content}`).join('\n')}
 
 Classify the LATEST user message as one of:
 - "order_status": Asking about order status, tracking, delivery

@@ -3,6 +3,17 @@ import { NextResponse } from "next/server";
 import { createRoom, postMessage, formatBandPost, getRoomHistory } from "@/lib/band/client";
 import { runSupervisor } from "@/lib/agents/supervisor/graph";
 
+type ToolRequest = {
+  tool?: string;
+  params: Record<string, string | number | undefined>;
+};
+
+type MockOrder = {
+  status: string;
+  eta: string;
+  carrier: string;
+};
+
 // Simple Doer logic (no LangGraph to avoid loops)
 function doerLogic(intent: string, originalMessage: string, userId: string) {
   console.log(`📝 Doer processing intent: ${intent}`);
@@ -49,17 +60,18 @@ function doerLogic(intent: string, originalMessage: string, userId: string) {
 }
 
 // Simple Tool Executor logic (no LangGraph)
-async function toolExecutorLogic(toolRequest: any, originalUserId: string) {
+async function toolExecutorLogic(toolRequest: ToolRequest) {
   console.log(`🔧 Executing tool: ${toolRequest.tool}`);
   
   if (toolRequest.tool === "getOrderStatus") {
-    const mockOrders: Record<string, any> = {
+    const mockOrders: Record<string, MockOrder> = {
       "ORD-12345": { status: "shipped", eta: "2 days", carrier: "FedEx" }
     };
-    const order = mockOrders[toolRequest.params.orderId];
+    const orderId = String(toolRequest.params.orderId ?? "");
+    const order = mockOrders[orderId];
     return order 
-      ? `Order ${toolRequest.params.orderId}: ${order.status}, arriving in ${order.eta} via ${order.carrier}`
-      : `Order ${toolRequest.params.orderId} not found. Please check your order number.`;
+      ? `Order ${orderId}: ${order.status}, arriving in ${order.eta} via ${order.carrier}`
+      : `Order ${orderId} not found. Please check your order number.`;
   } 
   else if (toolRequest.tool === "processRefund") {
     return `Refund of $${toolRequest.params.amount} approved for ${toolRequest.params.userId}. Processed in 3-5 business days.`;
@@ -128,7 +140,10 @@ export async function POST(request: Request) {
     let finalResponse;
     if (decision.action === "call_tool") {
       console.log("\n📝 Step 3: Tool Executor running...");
-      finalResponse = await toolExecutorLogic(decision, userId);
+      finalResponse = await toolExecutorLogic({
+        tool: decision.tool,
+        params: decision.params ?? {},
+      });
       console.log(`✅ Tool Result: ${finalResponse.substring(0, 100)}...`);
       
       await postMessage(room.id, formatBandPost("ToolAgent", "execution_result", { 

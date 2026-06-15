@@ -1,7 +1,14 @@
 
 import { StateGraph, START, END, MemorySaver, Annotation } from "@langchain/langgraph";
-import { toolExecutorNode, TOOL_EXECUTOR_NODE } from "./nodes";
+import { toolExecutorNode, TOOL_EXECUTOR_NODE, ToolExecution } from "./nodes";
 import { randomUUID } from "crypto";
+
+type ToolDecision = {
+  action?: string;
+  tool?: string;
+  params?: Record<string, unknown>;
+  response?: string;
+};
 
 const GraphState = Annotation.Root({
   messages: Annotation<Array<{ role: string; content: string }>>({
@@ -10,7 +17,7 @@ const GraphState = Annotation.Root({
   }),
   roomId: Annotation<string>(),
   userId: Annotation<string>(),
-  decision: Annotation<any>({
+  decision: Annotation<ToolDecision | null>({
     reducer: (left, right) => right,
     default: () => null,
   }),
@@ -18,7 +25,7 @@ const GraphState = Annotation.Root({
     reducer: (left, right) => right,
     default: () => "",
   }),
-  toolCalls: Annotation<any[]>({
+  toolCalls: Annotation<ToolExecution[]>({
     reducer: (left, right) => right,
     default: () => [],
   }),
@@ -31,7 +38,7 @@ export async function runToolExecutor(
     messages: Array<{ role: string; content: string }>;
     roomId: string;
     userId: string;
-    decision: any;
+    decision: ToolDecision;
   },
   threadId?: string
 ) {
