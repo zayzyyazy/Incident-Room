@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Tue 16 Jun 2026, 17:47 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, and failed chats are saved as root `failed-chat-*.json` evidence files that show up in the dashboard incident list and can be analyzed like the seeded JSON fixtures.
+**Status (as of Tue 16 Jun 2026, 19:51 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, failed chats persist as root incident JSON files, and previous Mongo-stored chats can be reopened from a ChatGPT-style sidebar.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 19:51 — Previous chats sidebar
+
+**What happened:** Added a previous-chats sidebar to ReplyChat.
+**Problem (if any):** Chat messages were stored in Mongo, but there was no UI to browse old chat sessions.
+**Fix / result:** Added `/api/chat-history` to list stored chat summaries and rebuilt `/chat/[chatId]` with a sidebar for opening previous chats or starting a new one.
+
+---
 
 ### Tue 16 Jun 2026 — 17:47 — Failed chats persist as dashboard JSON
 
