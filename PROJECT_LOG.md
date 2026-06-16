@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Tue 16 Jun 2026, 19:51 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, failed chats persist as root incident JSON files, and previous Mongo-stored chats can be reopened from a ChatGPT-style sidebar.
+**Status (as of Tue 16 Jun 2026, 19:57 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, failed chats persist as root incident JSON files, and previous Mongo-stored chats for the single app user `user-123` can be reopened from a ChatGPT-style sidebar.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 19:57 — Chat sidebar scoped to user-123
+
+**What happened:** Scoped the ReplyChat sidebar and chat history APIs to the single app user `user-123`.
+**Problem (if any):** The sidebar listed stored chats without a fixed user filter, while this demo app is meant to behave as one user.
+**Fix / result:** Chat storage now saves as `user-123`, history list/load/delete filter by that user, and the support tools still map `user-123` to the demo fixture customer for order/refund lookups.
+
+---
 
 ### Tue 16 Jun 2026 — 19:51 — Previous chats sidebar
 
