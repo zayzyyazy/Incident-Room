@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Mon 15 Jun 2026, 18:39 UTC):** Phase 0–1 demo is still working, and reply chat now routes agent handoffs through Band, records tool calls/history, and can turn ended support chats into dashboard incidents.
+**Status (as of Tue 16 Jun 2026, 17:13 UTC):** Phase 0–1 demo is still working, and reply chat now recruits configured Band remote agents, routes Supervisor → Doer → Tool Executor handoffs through Band room messages/events, records tool calls/history, and can turn ended support chats into dashboard incidents.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 17:13 — Reply chat uses Band remote-agent handoffs
+
+**What happened:** Added the configured Supervisor, Doer, and Tool Executor Band remote agents to each reply chat room and sent their assignments/handoffs as Band messages/events.
+**Problem (if any):** The app was posting workflow traces to Band, but the LangGraph agents still mostly shared state directly instead of reading the handoff from the Band room.
+**Fix / result:** Added Band role config from `.env`, room participant recruitment, per-agent API key posting, Band room payload parsing, and kept local execution as the safe fallback so chat behavior stays the same.
+
+---
 
 ### Mon 15 Jun 2026 — 18:39 — Reply chat now feeds investigations
 

@@ -231,16 +231,16 @@ function parseBandPost(content?: string) {
     return null;
   }
 
-  const match = content.match(/^\[(?<agent>[^\]]+)]\s+(?<event>[^\n]+)\n\n(?<json>[\s\S]+)$/);
-  if (!match?.groups) {
+  const match = content.match(/^\[([^\]]+)]\s+([^\n]+)\n\n([\s\S]+)$/);
+  if (!match) {
     return null;
   }
 
   try {
     return {
-      agent: match.groups.agent,
-      event: match.groups.event.trim(),
-      payload: JSON.parse(match.groups.json) as unknown,
+      agent: match[1],
+      event: match[2].trim(),
+      payload: JSON.parse(match[3]) as unknown,
     };
   } catch {
     return null;
