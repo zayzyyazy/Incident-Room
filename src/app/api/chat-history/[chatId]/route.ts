@@ -10,6 +10,10 @@ type ChatHistoryDocument = StoredChatMessage & {
   investigationInput?: unknown;
 };
 
+function chatDbName() {
+  return process.env.MONGO_DB || "bands_hackathondb";
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { chatId: string } }
@@ -22,7 +26,7 @@ export async function GET(
     }
 
     const client = await getMongoClient();
-    const db = client.db("bands_hackathondb");
+    const db = client.db(chatDbName());
     const collection = db.collection("chats");
 
     const messages = await collection
@@ -83,7 +87,7 @@ export async function DELETE(
     }
 
     const client = await getMongoClient();
-    const db = client.db("bands_hackathondb");
+    const db = client.db(chatDbName());
     const collection = db.collection("chats");
 
     const result = await collection.deleteMany({ chatId });

@@ -2,6 +2,10 @@
 import { NextResponse } from "next/server";
 import getMongoClient from "@/lib/mongodb";
 
+function chatDbName() {
+  return process.env.MONGO_DB || "bands_hackathondb";
+}
+
 export async function POST(request: Request) {
   try {
     const {
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const client = await getMongoClient();
-    const db = client.db("bands_hackathondb");
+    const db = client.db(chatDbName());
     const collection = db.collection("chats");
 
     await collection.insertOne({
