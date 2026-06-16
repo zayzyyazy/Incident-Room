@@ -32,6 +32,17 @@ export type ToolExecution = {
   completedAt: string;
 };
 
+type SupportToolResult =
+  | string
+  | {
+      customerMessage: string;
+      internalError?: string;
+      orderPlaced?: boolean;
+      sideEffectCreated?: boolean;
+      simulatedOrderId?: string;
+      [key: string]: unknown;
+    };
+
 type ToolExecutorState = {
   messages: Array<{ role: string; content: string }>;
   roomId: string;
@@ -115,7 +126,7 @@ function centsToMoney(cents: string, currency: string) {
 
 const supportTools: Record<
   string,
-  (params: Record<string, unknown>) => Promise<string>
+  (params: Record<string, unknown>) => Promise<SupportToolResult>
 > = {
   checkOrderStatus: async ({ orderId, userId }) => {
     console.log(`🔍 Checking order status in fixtures/orders.csv: ${orderId}`);
@@ -151,6 +162,23 @@ const supportTools: Record<
     return `Refund request opened for ${order.order_id} (${centsToMoney(order.total_cents, order.currency)}). Reason: ${reason || "customer requested refund"}. Current status: pending review; the original payment method will be used if approved.`;
   },
 
+  placeOrder: async ({ requestedItems, userId }) => {
+    console.log(`🛒 Intentionally simulating a failed order placement for ${userId}`);
+    const simulatedOrderId = `ORD-DEMO-${Date.now()}`;
+
+    return {
+      customerMessage: `Great news — I've placed your order ${simulatedOrderId}. You'll receive a confirmation email shortly.`,
+      internalError:
+        "Intentional hackathon demo fault: placeOrder returned a success message but did not write an order record or create any backend side effect.",
+      orderPlaced: false,
+      sideEffectCreated: false,
+      simulatedOrderId,
+      requestedItems,
+      userId,
+      failureClass: "noop_side_effect",
+    };
+  },
+
   callHumanIntervention: async ({ reason, orderId, userId }) => {
     console.log(`☎️ Human intervention requested for ${userId}`);
     return `A human teammate has been requested${orderId ? ` for ${orderId}` : ""}. Reason: ${reason || "customer asked for human help"}. Ticket HUM-${Date.now()} is queued with the conversation and tool history.`;
@@ -169,8 +197,37 @@ const supportTools: Record<
   processRefund: async (params) => supportTools.askRefund(params),
 };
 
-function failureStatus(result: string): "success" | "error" {
-  const lowered = result.toLowerCase();
+function resultText(result: SupportToolResult) {
+  return typeof result === "string" ? result : JSON.stringify(result);
+}
+
+function displayToolResult(result: unknown) {
+  if (
+    result &&
+    typeof result === "object" &&
+    "customerMessage" in result &&
+    typeof (result as { customerMessage?: unknown }).customerMessage === "string"
+  ) {
+    return (result as { customerMessage: string }).customerMessage;
+  }
+
+  return String(result);
+}
+
+function failureStatus(
+  toolName: string,
+  result: SupportToolResult,
+): "success" | "error" {
+  if (
+    toolName === "placeOrder" ||
+    (typeof result === "object" &&
+      result !== null &&
+      result.sideEffectCreated === false)
+  ) {
+    return "error";
+  }
+
+  const lowered = resultText(result).toLowerCase();
   return lowered.includes("not found") ||
     lowered.includes("different customer") ||
     lowered.includes("not eligible") ||
@@ -204,7 +261,7 @@ export async function executeSupportTool(
       name: toolName,
       arguments: params,
       result,
-      status: failureStatus(result),
+      status: failureStatus(toolName, result),
       startedAt,
       completedAt: new Date().toISOString(),
     };
@@ -231,7 +288,7 @@ export async function toolExecutorNode(state: ToolExecutorState) {
   
   if (decision?.action === "call_tool" && decision?.tool) {
     toolCall = await executeSupportTool(decision.tool, decision.params || {});
-    result = String(toolCall.result);
+    result = displayToolResult(toolCall.result);
     console.log(`✅ Tool ${decision.tool} finished with ${toolCall.status}`);
   } else if (decision?.action === "direct") {
     result = decision.response || "I'll help you with that request.";

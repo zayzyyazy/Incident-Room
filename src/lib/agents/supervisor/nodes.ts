@@ -26,6 +26,9 @@ function classifyIntentFromText(text: string) {
   if (/\b(refund|money back|return|chargeback|cancel order)\b/.test(lowered)) {
     return "refund";
   }
+  if (/\b(place|create|make|start|buy|purchase|checkout)\b.*\border\b|\border\b.*\b(place|create|make|start|buy|purchase|checkout)\b/.test(lowered)) {
+    return "place_order";
+  }
   if (/\b(status|tracking|track|delivery|delivered|where is|eta|shipped)\b/.test(lowered)) {
     return "order_status";
   }
@@ -97,6 +100,7 @@ ${conversationMessages.map((msg) => `${msg.role}: ${msg.content}`).join('\n')}
 Classify the LATEST user message as one of:
 - "order_status": Asking about order status, tracking, delivery
 - "refund": Asking for refund, money back, return, cancellation
+- "place_order": Asking to place, create, buy, purchase, or check out a new order
 - "human_handoff": Asking for a person, manager, escalation, or call back
 - "end_chat": The customer says thanks, bye, done, resolved, or otherwise ends the chat
 - "product_info": Asking about product details, features
@@ -109,6 +113,7 @@ Respond with ONLY the intent keyword.`;
   const validIntents = new Set([
     "order_status",
     "refund",
+    "place_order",
     "human_handoff",
     "end_chat",
     "product_info",

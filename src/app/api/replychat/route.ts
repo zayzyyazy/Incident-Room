@@ -14,7 +14,13 @@ import {
   StoredChatMessage,
   StoredToolCall,
 } from "@/lib/chat/evidence";
-import { upsertIncidentFromEvidence } from "@/lib/incidents/store";
+import { runTwoAgentInvestigation } from "@/lib/orchestrator/run-two-agent-investigation";
+import {
+  completeInvestigation,
+  failInvestigation,
+  startInvestigation,
+  upsertIncidentFromEvidence,
+} from "@/lib/incidents/store";
 
 type WorkflowTraceEntry = {
   step: string;
@@ -38,6 +44,18 @@ type SupportDecision = {
   params?: Record<string, unknown>;
   response?: string;
   reasoning?: string;
+};
+
+type RegisteredIncident = {
+  id: string;
+  title: string;
+  status: string;
+  investigation?: {
+    status: string;
+    runId: string;
+    roomId?: string;
+    error?: string;
+  };
 };
 
 function nowIso() {
@@ -99,10 +117,21 @@ function appendCurrentUserMessage(
 
 function toolSignals(toolsCalled: StoredToolCall[]) {
   return toolsCalled.flatMap((tool) => {
-    const result = String(tool.result ?? "").toLowerCase();
+    const result = typeof tool.result === "string"
+      ? tool.result.toLowerCase()
+      : JSON.stringify(tool.result ?? {}).toLowerCase();
     const signals: string[] = [];
     if (tool.status === "error") {
       signals.push(`tool_error:${tool.name}`);
+    }
+    if (tool.name === "placeOrder") {
+      signals.push("place_order_workflow");
+      if (tool.status === "error" || result.includes('"orderplaced":false')) {
+        signals.push("place_order_noop");
+      }
+      if (result.includes("customerMessage".toLowerCase())) {
+        signals.push("deceptive_success_reply");
+      }
     }
     if (tool.name === "askRefund" || result.includes("refund")) {
       signals.push("refund_workflow");
@@ -151,6 +180,7 @@ function analyzeEndOfChat(input: {
     input.decision?.tool === "callHumanIntervention" ||
     loweredReply.includes("human teammate has been requested");
   const refundPending = signals.includes("refund_workflow");
+  const placeOrderNoop = signals.includes("place_order_noop");
   const unresolved =
     signals.includes("unresolved_tool_result") ||
     signals.some((signal) => signal.startsWith("tool_error"));
@@ -162,14 +192,16 @@ function analyzeEndOfChat(input: {
     signals.push("workflow_handoff_closed");
   }
 
-  const chatEnded = userEnded || workflowEnded;
+  const chatEnded = userEnded || workflowEnded || placeOrderNoop;
   const shouldInvestigate =
     chatEnded &&
     (unresolved ||
       refundPending ||
+      placeOrderNoop ||
       workflowEnded ||
       input.intent === "refund" ||
-      input.intent === "human_handoff");
+      input.intent === "human_handoff" ||
+      input.intent === "place_order");
 
   return {
     chatEnded,
@@ -177,10 +209,54 @@ function analyzeEndOfChat(input: {
     signals: Array.from(new Set(signals)),
     reason: chatEnded
       ? shouldInvestigate
-        ? "Chat is closed and contains refund, handoff, or unresolved tool signals."
+        ? placeOrderNoop
+          ? "Chat contains a simulated place-order no-op: the assistant confirmed success, but the tool recorded no backend order."
+          : "Chat is closed and contains refund, handoff, or unresolved tool signals."
         : "Chat is closed without investigation-worthy execution signals."
       : "Chat is still active; wait for customer closure or handoff before dashboard registration.",
   };
+}
+
+async function runAutomaticInvestigation(
+  incidentId: string,
+  evidence: ReturnType<typeof buildChatEvidence>,
+) {
+  const run = startInvestigation(incidentId);
+
+  try {
+    const result = await runTwoAgentInvestigation(evidence);
+    const contradiction = {
+      detected:
+        result.outcomeAnalysis.contradicts_msg_id !== null ||
+        (result.conversationAnalysis.conversation_verdict ===
+          "appears_resolved" &&
+          result.outcomeAnalysis.execution_verdict === "outcome_failed"),
+      contradicts_msg_id: result.outcomeAnalysis.contradicts_msg_id,
+      reason: result.outcomeAnalysis.contradiction_reason_en,
+    };
+
+    const completed = completeInvestigation(incidentId, run.id, {
+      roomId: result.roomId,
+      bandMessageIds: result.bandMessageIds,
+      conversationAnalysis: result.conversationAnalysis,
+      outcomeAnalysis: result.outcomeAnalysis,
+      contradiction,
+    });
+
+    return {
+      status: completed.status,
+      runId: completed.id,
+      roomId: completed.roomId,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Investigation failed";
+    const failed = failInvestigation(incidentId, run.id, message);
+    return {
+      status: failed.status,
+      runId: failed.id,
+      error: message,
+    };
+  }
 }
 
 // ========== MAIN HANDLER ==========
@@ -417,7 +493,7 @@ export async function POST(request: Request) {
       title: `Support chat ${chatId}: ${intent}`,
     });
 
-    let incident: { id: string; title: string; status: string } | null = null;
+    let incident: RegisteredIncident | null = null;
     if (analyzer.chatEnded && analyzer.shouldInvestigate) {
       const record = upsertIncidentFromEvidence(evidence);
       incident = {
@@ -425,6 +501,11 @@ export async function POST(request: Request) {
         title: record.evidence.title,
         status: record.status,
       };
+
+      if (analyzer.signals.includes("place_order_noop")) {
+        incident.investigation = await runAutomaticInvestigation(record.id, evidence);
+        incident.status = incident.investigation.status;
+      }
     }
 
     await postAgentStep(roomId, "05", "EndAnalyzer", "analysis_result", {

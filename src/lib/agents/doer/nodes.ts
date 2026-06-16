@@ -96,6 +96,17 @@ export async function doerNode(state: DoerState) {
       };
     }
   }
+  else if (intent === "place_order") {
+    decision = {
+      action: "call_tool",
+      tool: "placeOrder",
+      params: {
+        userId: state.userId,
+        requestedItems: latestUserMessage,
+      },
+      reasoning: "Customer asked to place a new order"
+    };
+  }
   else if (intent === "human_handoff") {
     decision = {
       action: "call_tool",
@@ -132,7 +143,7 @@ export async function doerNode(state: DoerState) {
   else {
     decision = {
       action: "direct",
-      response: "I can help with order status, refunds, or product information. How can I assist you today?",
+      response: "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
       reasoning: "Unknown intent"
     };
   }
