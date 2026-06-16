@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Tue 16 Jun 2026, 17:39 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, and the new place-order demo fault can create an incident from our own chat transcript/tool trace and auto-launch the two-agent investigation path.
+**Status (as of Tue 16 Jun 2026, 17:47 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, and failed chats are saved as root `failed-chat-*.json` evidence files that show up in the dashboard incident list and can be analyzed like the seeded JSON fixtures.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 17:47 — Failed chats persist as dashboard JSON
+
+**What happened:** Failed ReplyChat sessions now write a full incident evidence JSON file at the repo root.
+**Problem (if any):** Failed chats were registered in memory, but they were not durable JSON inputs like the other incident review examples.
+**Fix / result:** Added root `failed-chat-*.json` persistence, made the incident store load those files, and verified a saved failed chat appears in the dashboard incident list format.
+
+---
 
 ### Tue 16 Jun 2026 — 17:39 — Faulty place-order demo path
 
