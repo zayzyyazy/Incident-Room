@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Tue 16 Jun 2026, 19:57 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, failed chats persist as root incident JSON files, and previous Mongo-stored chats for the single app user `user-123` can be reopened from a ChatGPT-style sidebar.
+**Status (as of Tue 16 Jun 2026, 20:18 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, Doer and Tool Executor read Band room assignment payloads first, failed chats persist as root incident JSON files, and previous Mongo-stored chats for `user-123` can be reopened from a ChatGPT-style sidebar.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 20:18 — Band room handoffs are primary inputs
+
+**What happened:** Strengthened ReplyChat’s Band-of-agents workflow so Doer and Tool Executor read complete room handoff payloads before using direct state.
+**Problem (if any):** The previous flow posted handoffs to Band, but direct LangGraph inputs still carried enough data to look like Band was only an audit log.
+**Fix / result:** Supervisor now posts a full `handoff_to_doer` payload into Band, Doer reads it first, Doer posts `tool_executor_assignment`, and Tool Executor reads that first before running tools.
+
+---
 
 ### Tue 16 Jun 2026 — 19:57 — Chat sidebar scoped to user-123
 
