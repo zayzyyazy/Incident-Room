@@ -408,10 +408,8 @@ export async function POST(request: Request) {
     console.log("\n📝 Step 2: Doer (LangGraph) applying business policies...");
     const doerResult = await runDoer(
       {
-        messages: fullMessages,
         roomId: roomId,
         userId: userId,
-        intent: intent,
       },
       threadId
     );
@@ -459,10 +457,8 @@ export async function POST(request: Request) {
 
       const toolResult = await runToolExecutor(
         {
-          messages: fullMessages,
           roomId: roomId,
           userId: userId,
-          decision: decision,
         },
         threadId
       );
