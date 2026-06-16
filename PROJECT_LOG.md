@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Tue 16 Jun 2026, 20:18 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, Doer and Tool Executor read Band room assignment payloads first, failed chats persist as root incident JSON files, and previous Mongo-stored chats for `user-123` can be reopened from a ChatGPT-style sidebar.
+**Status (as of Tue 16 Jun 2026, 20:25 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, Doer and Tool Executor depend on Band room assignment payloads rather than direct route handoff data, failed chats persist as root incident JSON files, and previous Mongo-stored chats for `user-123` can be reopened from a ChatGPT-style sidebar.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 20:25 — Direct handoff payloads removed
+
+**What happened:** Removed meaningful `intent`, transcript, and `decision` data from the route calls into Doer and Tool Executor.
+**Problem (if any):** Even after Band-first reads, the route still passed enough direct state for the agents to work without reading the Band handoff.
+**Fix / result:** `runDoer` now receives only room/user scaffolding and `runToolExecutor` receives no decision; their actual task inputs come from `handoff_to_doer` and `tool_executor_assignment` in the Band room.
+
+---
 
 ### Tue 16 Jun 2026 — 20:18 — Band room handoffs are primary inputs
 
