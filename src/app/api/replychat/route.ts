@@ -18,6 +18,7 @@ import { runTwoAgentInvestigation } from "@/lib/orchestrator/run-two-agent-inves
 import {
   completeInvestigation,
   failInvestigation,
+  persistFailedChatEvidence,
   startInvestigation,
   upsertIncidentFromEvidence,
 } from "@/lib/incidents/store";
@@ -50,6 +51,7 @@ type RegisteredIncident = {
   id: string;
   title: string;
   status: string;
+  evidenceFile?: string;
   investigation?: {
     status: string;
     runId: string;
@@ -490,16 +492,20 @@ export async function POST(request: Request) {
       userId,
       roomId,
       analyzer,
-      title: `Support chat ${chatId}: ${intent}`,
+      title: analyzer.shouldInvestigate
+        ? `Failed chat ${chatId}: ${intent}`
+        : `Support chat ${chatId}: ${intent}`,
     });
 
     let incident: RegisteredIncident | null = null;
     if (analyzer.chatEnded && analyzer.shouldInvestigate) {
+      const evidenceFile = persistFailedChatEvidence(evidence);
       const record = upsertIncidentFromEvidence(evidence);
       incident = {
         id: record.id,
         title: record.evidence.title,
         status: record.status,
+        evidenceFile,
       };
 
       if (analyzer.signals.includes("place_order_noop")) {
