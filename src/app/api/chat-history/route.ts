@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import getMongoClient from "@/lib/mongodb";
 
+export const dynamic = "force-dynamic";
+
 type ChatDocument = {
   chatId?: string;
   userId?: string;
