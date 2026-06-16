@@ -10,6 +10,8 @@ type ChatHistoryDocument = StoredChatMessage & {
   investigationInput?: unknown;
 };
 
+const SINGLE_USER_ID = "user-123";
+
 function chatDbName() {
   return process.env.MONGO_DB || "bands_hackathondb";
 }
@@ -30,7 +32,7 @@ export async function GET(
     const collection = db.collection("chats");
 
     const messages = await collection
-      .find({ chatId })
+      .find({ chatId, userId: SINGLE_USER_ID })
       .sort({ timestamp: 1 })
       .toArray();
 
@@ -48,7 +50,7 @@ export async function GET(
     const latestRichMessage = [...typedMessages]
       .reverse()
       .find((message) => message.evidence || message.analyzer || message.incident);
-    const userId = typedMessages.find((message) => message.userId)?.userId ?? "customer_123";
+    const userId = typedMessages.find((message) => message.userId)?.userId ?? SINGLE_USER_ID;
     const evidence =
       latestRichMessage?.evidence ??
       buildChatEvidence(storedMessages, {
@@ -60,6 +62,7 @@ export async function GET(
 
     return NextResponse.json({ 
       chat_id: chatId, 
+      user_id: SINGLE_USER_ID,
       messages,
       evidence,
       investigation_input: { evidence },
@@ -90,7 +93,7 @@ export async function DELETE(
     const db = client.db(chatDbName());
     const collection = db.collection("chats");
 
-    const result = await collection.deleteMany({ chatId });
+    const result = await collection.deleteMany({ chatId, userId: SINGLE_USER_ID });
 
     return NextResponse.json({ 
       success: true, 

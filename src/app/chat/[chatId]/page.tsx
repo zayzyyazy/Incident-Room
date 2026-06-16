@@ -39,6 +39,8 @@ type ChatSummary = {
   hasIncident: boolean;
 };
 
+const SINGLE_USER_ID = "user-123";
+
 function newChatId() {
   return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -150,7 +152,7 @@ export default function ChatPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chatId,
-        userId: "customer_123",
+        userId: SINGLE_USER_ID,
         role: "user",
         content: outgoingText,
       }),
@@ -162,6 +164,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chatId,
+          userId: SINGLE_USER_ID,
           message: outgoingText,
           conversationHistory: messages,
         }),
@@ -190,7 +193,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chatId,
-          userId: "customer_123",
+          userId: SINGLE_USER_ID,
           role: "assistant",
           content: data.reply,
           intent: data.intent,
@@ -238,7 +241,7 @@ export default function ChatPage() {
 
         <div className="flex-1 overflow-y-auto p-2">
           <div className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-            Previous chats
+            Previous chats - {SINGLE_USER_ID}
           </div>
           {isSidebarLoading ? (
             <div className="px-2 py-3 text-sm text-gray-400">Loading chats...</div>

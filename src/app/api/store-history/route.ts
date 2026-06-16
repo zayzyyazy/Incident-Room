@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import getMongoClient from "@/lib/mongodb";
 
+const SINGLE_USER_ID = "user-123";
+
 function chatDbName() {
   return process.env.MONGO_DB || "bands_hackathondb";
 }
@@ -10,7 +12,6 @@ export async function POST(request: Request) {
   try {
     const {
       chatId,
-      userId,
       role,
       content,
       intent,
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
       incident,
     } = await request.json();
 
-    if (!chatId || !userId || !role || !content) {
+    if (!chatId || !role || !content) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
 
     await collection.insertOne({
       chatId,
-      userId,
+      userId: SINGLE_USER_ID,
       role,
       content,
       intent: intent || null,
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
       timestamp: new Date()
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, userId: SINGLE_USER_ID });
   } catch (error) {
     console.error("Failed to store chat history:", error);
     return NextResponse.json({ error: "Failed to store message" }, { status: 500 });

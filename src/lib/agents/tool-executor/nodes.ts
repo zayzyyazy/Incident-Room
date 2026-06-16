@@ -124,6 +124,10 @@ function centsToMoney(cents: string, currency: string) {
   return `${currency || "USD"} ${amount.toFixed(2)}`;
 }
 
+function fixtureUserId(userId: unknown) {
+  return userId === "user-123" ? "customer_123" : userId;
+}
+
 const supportTools: Record<
   string,
   (params: Record<string, unknown>) => Promise<SupportToolResult>
@@ -131,12 +135,13 @@ const supportTools: Record<
   checkOrderStatus: async ({ orderId, userId }) => {
     console.log(`🔍 Checking order status in fixtures/orders.csv: ${orderId}`);
     const order = await findOrder(String(orderId ?? ""));
+    const lookupUserId = fixtureUserId(userId);
 
     if (!order) {
       return `Order ${orderId ?? ""} was not found in the live order file. Please confirm the order number or ask for a human review.`;
     }
 
-    if (userId && order.user_id !== userId) {
+    if (lookupUserId && order.user_id !== lookupUserId) {
       return `Order ${order.order_id} exists, but it is linked to a different customer account. I need a human teammate to verify ownership before sharing details.`;
     }
 
@@ -146,12 +151,13 @@ const supportTools: Record<
   askRefund: async ({ orderId, userId, reason }) => {
     console.log(`💰 Evaluating refund from fixtures/orders.csv: ${orderId}`);
     const order = await findOrder(String(orderId ?? ""));
+    const lookupUserId = fixtureUserId(userId);
 
     if (!order) {
       return `I could not find order ${orderId ?? ""}, so I cannot request the refund yet. Please confirm the order number or I can involve a human teammate.`;
     }
 
-    if (userId && order.user_id !== userId) {
+    if (lookupUserId && order.user_id !== lookupUserId) {
       return `Order ${order.order_id} belongs to a different customer record. I am escalating this refund request to a human teammate for verification.`;
     }
 

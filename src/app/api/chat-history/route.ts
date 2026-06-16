@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import getMongoClient from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
+const SINGLE_USER_ID = "user-123";
 
 type ChatDocument = {
   chatId?: string;
@@ -35,7 +36,7 @@ export async function GET() {
     const collection = db.collection("chats");
 
     const messages = (await collection
-      .find({})
+      .find({ userId: SINGLE_USER_ID })
       .sort({ timestamp: -1 })
       .limit(500)
       .toArray()) as unknown as ChatDocument[];
@@ -98,6 +99,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      userId: SINGLE_USER_ID,
       chats: Array.from(grouped.values()).sort(
         (a, b) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),

@@ -264,7 +264,7 @@ async function runAutomaticInvestigation(
 // ========== MAIN HANDLER ==========
 export async function POST(request: Request) {
   try {
-    const { chatId, message, conversationHistory, userId = "customer_123" } = await request.json();
+    const { chatId, message, conversationHistory, userId = "user-123" } = await request.json();
 
     if (!message || !chatId) {
       return NextResponse.json({ error: "chatId and message are required" }, { status: 400 });
