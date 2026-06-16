@@ -31,6 +31,13 @@ type IntentPayload = {
   intent?: string;
 };
 
+type DoerAssignmentPayload = {
+  intent?: string;
+  messages?: AgentMessage[];
+  userId?: string;
+  latest_message?: string;
+};
+
 function extractOrderIdFromMessages(messages: Array<{ role: string; content: string }>) {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
@@ -45,17 +52,24 @@ function extractOrderIdFromMessages(messages: Array<{ role: string; content: str
 }
 
 export async function doerNode(state: DoerState) {
-  const bandIntent = await readIntentFromBand(state);
+  const assignment = await readAssignmentFromBand(state);
+  const assignmentMessages = Array.isArray(assignment?.messages)
+    ? assignment.messages
+    : null;
+  const messages = assignmentMessages?.length ? assignmentMessages : state.messages;
+  const userId = assignment?.userId || state.userId;
+  const bandIntent = assignment?.intent ?? (await readIntentFromBand(state));
   const intent = bandIntent || state.intent || "unknown";
   const latestUserMessage =
-    [...state.messages].reverse().find((msg) => msg.role === "user")
-      ?.content || "";
-  const extractedOrderId = extractOrderIdFromMessages(state.messages);
+    assignment?.latest_message ||
+    [...messages].reverse().find((msg) => msg.role === "user")?.content ||
+    "";
+  const extractedOrderId = extractOrderIdFromMessages(messages);
   
   const hasOrderId = extractedOrderId !== null;
   
   console.log(`📝 Doer processing - Intent: ${intent}, Has Order ID: ${hasOrderId}, Order ID: ${extractedOrderId}`);
-  console.log(`📝 Full conversation length: ${state.messages.length} messages`);
+  console.log(`📝 Full conversation length: ${messages.length} messages`);
   
   // Rule-based decision
   let decision;
@@ -65,7 +79,7 @@ export async function doerNode(state: DoerState) {
       decision = {
         action: "call_tool",
         tool: "checkOrderStatus",
-        params: { orderId: extractedOrderId, userId: state.userId },
+        params: { orderId: extractedOrderId, userId },
         reasoning: "Order ID found, fetching status"
       };
     } else {
@@ -83,7 +97,7 @@ export async function doerNode(state: DoerState) {
         tool: "askRefund",
         params: {
           orderId: extractedOrderId,
-          userId: state.userId,
+          userId,
           reason: latestUserMessage
         },
         reasoning: "Order ID found, opening refund request from live order data"
@@ -101,7 +115,7 @@ export async function doerNode(state: DoerState) {
       action: "call_tool",
       tool: "placeOrder",
       params: {
-        userId: state.userId,
+        userId,
         requestedItems: latestUserMessage,
       },
       reasoning: "Customer asked to place a new order"
@@ -113,7 +127,7 @@ export async function doerNode(state: DoerState) {
       tool: "callHumanIntervention",
       params: {
         orderId: extractedOrderId,
-        userId: state.userId,
+        userId,
         reason: latestUserMessage || "Customer requested a human teammate"
       },
       reasoning: "Customer requested human intervention"
@@ -149,13 +163,31 @@ export async function doerNode(state: DoerState) {
   }
   
   console.log(`✅ Doer decision: ${decision.action}${decision.tool ? ` - ${decision.tool}` : ''}`);
-  await writeDecisionToBand(state, intent, decision);
+  await writeDecisionToBand(state, intent, decision, userId);
   
   return {
     ...state,
     decision,
-    messages: [...state.messages, { role: "assistant", content: `Decision: ${decision.action}` }]
+    messages: [...messages, { role: "assistant", content: `Decision: ${decision.action}` }]
   };
+}
+
+async function readAssignmentFromBand(state: DoerState) {
+  try {
+    const payload = await readBandWorkflowPayload<DoerAssignmentPayload>(
+      state.roomId,
+      "handoff_to_doer",
+      "doer",
+    );
+    if (payload?.intent) {
+      console.log(`📡 Doer read full assignment from Band room ${state.roomId}: ${payload.intent}`);
+      return payload;
+    }
+  } catch (error) {
+    console.warn("Band doer assignment read failed", error);
+  }
+
+  return null;
 }
 
 async function readIntentFromBand(state: DoerState) {
@@ -180,6 +212,7 @@ async function writeDecisionToBand(
   state: DoerState,
   intent: string,
   decision: DoerDecision,
+  userId: string,
 ) {
   try {
     await postBandWorkflowEvent(
@@ -189,7 +222,7 @@ async function writeDecisionToBand(
       {
         intent,
         decision,
-        userId: state.userId,
+        userId,
       },
       {
         mentionRole:

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createRoom, postMessage, formatBandPost, getRoomHistory } from "@/lib/band/client";
 import {
+  postBandWorkflowEvent,
   postBandWorkflowAssignment,
   recruitBandWorkflowAgents,
 } from "@/lib/band/agent-workflow";
@@ -376,12 +377,32 @@ export async function POST(request: Request) {
 
     const historyAfterSupervisor = await getRoomHistory(roomId);
 
-    await postAgentStep(roomId, "02", "Supervisor", "handoff_to_doer", {
+    const doerHandoffPayload = {
       instruction:
         "Doer, use the Supervisor intent and Band room context to choose either a direct answer or a tool request.",
       intent,
+      messages: fullMessages,
+      latest_message: message,
+      chatId,
+      userId,
       band_history_count: historyAfterSupervisor.length,
-    }, { intent });
+    };
+
+    await postAgentStep(roomId, "02", "Supervisor", "handoff_to_doer", doerHandoffPayload, { intent });
+    try {
+      await postBandWorkflowEvent(
+        "supervisor",
+        roomId,
+        "handoff_to_doer",
+        doerHandoffPayload,
+        {
+          mentionRole: "doer",
+          metadata: { intent, chatId, userId },
+        },
+      );
+    } catch (error) {
+      console.warn("Band supervisor-to-doer handoff failed", error);
+    }
 
     // Step 2: Doer applies policies using LangGraph
     console.log("\n📝 Step 2: Doer (LangGraph) applying business policies...");
@@ -409,12 +430,32 @@ export async function POST(request: Request) {
 
     if (decision?.action === "call_tool") {
       console.log(`\n📝 Step 3: ToolExecutor (LangGraph) running ${decision.tool}...`);
-      await postAgentStep(roomId, "03", "Doer", "tool_executor_assignment", {
+      const toolExecutorAssignment = {
         instruction:
           "Tool Executor, run the requested live support tool and post the result back to Band before the assistant responds.",
+        decision,
         tool: decision.tool,
         params: decision.params,
-      }, { intent, tool: decision.tool });
+        intent,
+        chatId,
+        userId,
+      };
+
+      await postAgentStep(roomId, "03", "Doer", "tool_executor_assignment", toolExecutorAssignment, { intent, tool: decision.tool });
+      try {
+        await postBandWorkflowEvent(
+          "doer",
+          roomId,
+          "tool_executor_assignment",
+          toolExecutorAssignment,
+          {
+            mentionRole: "tool_executor",
+            metadata: { intent, tool: decision.tool, chatId, userId },
+          },
+        );
+      } catch (error) {
+        console.warn("Band doer-to-tool-executor assignment failed", error);
+      }
 
       const toolResult = await runToolExecutor(
         {

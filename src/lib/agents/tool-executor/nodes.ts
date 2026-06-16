@@ -59,6 +59,9 @@ type ToolExecutorState = {
 
 type ToolRequestPayload = {
   decision?: ToolExecutorState["decision"];
+  tool?: string;
+  params?: Record<string, unknown>;
+  response?: string;
 };
 
 function normalizeOrderId(orderId?: string) {
@@ -286,7 +289,7 @@ export async function executeSupportTool(
 }
 
 export async function toolExecutorNode(state: ToolExecutorState) {
-  const decision = (await readDecisionFromBand(state)) ?? state.decision;
+  const decision = (await readAssignmentFromBand(state)) ?? state.decision;
   let result = "Tool execution failed";
   let toolCall: ToolExecution | null = null;
   
@@ -313,19 +316,45 @@ export async function toolExecutorNode(state: ToolExecutorState) {
   };
 }
 
-async function readDecisionFromBand(state: ToolExecutorState) {
+async function readAssignmentFromBand(state: ToolExecutorState) {
+  const assignment = await readToolPayloadFromBand(
+    state,
+    "tool_executor_assignment",
+    "assignment",
+  );
+  if (assignment) {
+    return assignment;
+  }
+
+  return readToolPayloadFromBand(state, "tool_request", "request");
+}
+
+async function readToolPayloadFromBand(
+  state: ToolExecutorState,
+  event: "tool_executor_assignment" | "tool_request",
+  label: string,
+) {
   try {
     const payload = await readBandWorkflowPayload<ToolRequestPayload>(
       state.roomId,
-      "tool_request",
+      event,
       "tool_executor",
     );
     if (payload?.decision) {
-      console.log(`📡 Tool Executor read request from Band room ${state.roomId}`);
+      console.log(`📡 Tool Executor read ${label} from Band room ${state.roomId}`);
       return payload.decision;
     }
+    if (payload?.tool) {
+      console.log(`📡 Tool Executor read ${label} from Band room ${state.roomId}`);
+      return {
+        action: "call_tool",
+        tool: payload.tool,
+        params: payload.params ?? {},
+        response: payload.response,
+      };
+    }
   } catch (error) {
-    console.warn("Band tool executor request read failed", error);
+    console.warn(`Band tool executor ${label} read failed`, error);
   }
 
   return null;
