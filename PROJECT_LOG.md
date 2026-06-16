@@ -11,6 +11,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ## Where we are right now
 
 **Status (as of Sun 15 Jun 2026):** **Cause Room architecture locked and implemented in code.** Room 1 = Claim Tracer + Backend Witness + Causal Judge with **2 challenge rounds** and **Cause Finding** output. Legacy CA→OI pipeline kept for comparison.
+**Status (as of Mon 15 Jun 2026, 18:39 UTC):** Phase 0–1 demo is still working, and reply chat now routes agent handoffs through Band, records tool calls/history, and can turn ended support chats into dashboard incidents.
 
 **Locked architecture (read `PRODUCT.md`):**
 - **Room 1 — Cause Room:** What happened? → Cause Finding + evolution + recurrence hint
@@ -114,6 +115,15 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 **Next tonight/tomorrow:** Failure Synthesizer v1, then push CRM code to GitHub for friend.
 
 ---
+### Mon 15 Jun 2026 — 18:39 — Reply chat now feeds investigations
+
+**What happened:** Reworked reply chat so Customer, Supervisor, Doer, Tool Executor, Assistant, and End Analyzer all post their handoffs/results through Band.
+**Problem (if any):** Chat replies were not producing the same evidence shape as incident investigations, and tool calls were static mocks.
+**Fix / result:** Added CSV-backed order/refund/human-handoff tools, saved workflow traces in chat history, generated `VoiceIncidentEvidence` from chats, and registered ended refund/handoff/problem chats on the dashboard.
+
+---
+
+### Fri 13 Jun 2026 — ~night — Full UI test pass 🎉🎉
 
 **What happened:** Ran investigations in the dashboard on Klaus + Anissa (Maria same pattern). Everything we built showed up correctly in the UI and Band.
 
@@ -272,6 +282,8 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 - [x] Handoff vs direct action distinction (capability vs failure-driven)
 - [x] Fake CRM dashboard + lookup wired to Pattern tab + OI context
 - [x] Klaus CRM match demo (prior calls + open ticket in Pattern tab)
+- [x] Three demo archetypes: Klaus, Maria, Anissa
+- [x] Reply chat can create investigation-ready evidence and dashboard incidents
 - [x] Clear product lock in `PRODUCT.md`
 - [x] GitHub repo live
 

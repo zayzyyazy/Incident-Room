@@ -1,25 +1,38 @@
 // src/lib/agents/doer/nodes.ts
-import { ChatOpenAI } from "@langchain/openai";
-
 export const DOER_NODE = "doer";
 
-export async function doerNode(state: any) {
-  const lastMessage = state.messages[state.messages.length - 1];
-  const userMessage = lastMessage?.content || "";
-  const intent = state.intent || "unknown";
-  
-  // Search ALL messages for order ID (not just last)
-  let extractedOrderId = null;
-  for (let i = state.messages.length - 1; i >= 0; i--) {
-    const msg = state.messages[i];
+type AgentMessage = {
+  role: string;
+  content: string;
+};
+
+type DoerState = {
+  messages: AgentMessage[];
+  roomId: string;
+  userId: string;
+  intent: string;
+  decision?: Record<string, unknown> | null;
+};
+
+function extractOrderIdFromMessages(messages: Array<{ role: string; content: string }>) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
     if (msg.role === 'user') {
       const match = msg.content.match(/ORD[-\s]?[A-Z0-9]+/i);
       if (match) {
-        extractedOrderId = match[0];
-        break;
+        return match[0].toUpperCase().replace(/\s+/g, "-").replace(/^ORD-?/, "ORD-");
       }
     }
   }
+  return null;
+}
+
+export async function doerNode(state: DoerState) {
+  const intent = state.intent || "unknown";
+  const latestUserMessage =
+    [...state.messages].reverse().find((msg) => msg.role === "user")
+      ?.content || "";
+  const extractedOrderId = extractOrderIdFromMessages(state.messages);
   
   const hasOrderId = extractedOrderId !== null;
   
@@ -33,7 +46,7 @@ export async function doerNode(state: any) {
     if (hasOrderId) {
       decision = {
         action: "call_tool",
-        tool: "getOrderStatus",
+        tool: "checkOrderStatus",
         params: { orderId: extractedOrderId, userId: state.userId },
         reasoning: "Order ID found, fetching status"
       };
@@ -49,9 +62,13 @@ export async function doerNode(state: any) {
     if (hasOrderId) {
       decision = {
         action: "call_tool",
-        tool: "processRefund",
-        params: { orderId: extractedOrderId, userId: state.userId, amount: 50 },
-        reasoning: "Order ID found, processing refund"
+        tool: "askRefund",
+        params: {
+          orderId: extractedOrderId,
+          userId: state.userId,
+          reason: latestUserMessage
+        },
+        reasoning: "Order ID found, opening refund request from live order data"
       };
     } else {
       decision = {
@@ -60,6 +77,25 @@ export async function doerNode(state: any) {
         reasoning: "Need order ID for refund"
       };
     }
+  }
+  else if (intent === "human_handoff") {
+    decision = {
+      action: "call_tool",
+      tool: "callHumanIntervention",
+      params: {
+        orderId: extractedOrderId,
+        userId: state.userId,
+        reason: latestUserMessage || "Customer requested a human teammate"
+      },
+      reasoning: "Customer requested human intervention"
+    };
+  }
+  else if (intent === "end_chat") {
+    decision = {
+      action: "direct",
+      response: "Thanks for chatting with us. I'll keep the conversation and tool history available if the team needs to review it.",
+      reasoning: "Customer ended the chat"
+    };
   }
   else if (intent === "product_info") {
     decision = {

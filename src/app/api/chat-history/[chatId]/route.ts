@@ -1,7 +1,14 @@
 // app/api/chat-history/[chatId]/route.ts
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import getMongoClient from "@/lib/mongodb";
+import { buildChatEvidence, StoredChatMessage } from "@/lib/chat/evidence";
+
+type ChatHistoryDocument = StoredChatMessage & {
+  userId?: string;
+  evidence?: unknown;
+  incident?: unknown;
+  investigationInput?: unknown;
+};
 
 export async function GET(
   request: Request,
@@ -14,7 +21,7 @@ export async function GET(
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
-    const client = await clientPromise;
+    const client = await getMongoClient();
     const db = client.db("bands_hackathondb");
     const collection = db.collection("chats");
 
@@ -23,9 +30,37 @@ export async function GET(
       .sort({ timestamp: 1 })
       .toArray();
 
+    const typedMessages = messages as unknown as ChatHistoryDocument[];
+    const storedMessages: StoredChatMessage[] = typedMessages.map((message) => ({
+      role: message.role,
+      content: message.content,
+      timestamp: message.timestamp,
+      intent: message.intent,
+      toolsCalled: message.toolsCalled ?? [],
+      roomId: message.roomId,
+      analyzer: message.analyzer,
+      workflowTrace: message.workflowTrace,
+    }));
+    const latestRichMessage = [...typedMessages]
+      .reverse()
+      .find((message) => message.evidence || message.analyzer || message.incident);
+    const userId = typedMessages.find((message) => message.userId)?.userId ?? "customer_123";
+    const evidence =
+      latestRichMessage?.evidence ??
+      buildChatEvidence(storedMessages, {
+        chatId,
+        userId,
+        roomId: latestRichMessage?.roomId,
+        analyzer: latestRichMessage?.analyzer,
+      });
+
     return NextResponse.json({ 
       chat_id: chatId, 
-      messages: messages 
+      messages,
+      evidence,
+      investigation_input: { evidence },
+      latest_analyzer: latestRichMessage?.analyzer ?? null,
+      latest_incident: latestRichMessage?.incident ?? null,
     });
     
   } catch (error) {
@@ -47,9 +82,9 @@ export async function DELETE(
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("chatdb");
-    const collection = db.collection("messages");
+    const client = await getMongoClient();
+    const db = client.db("bands_hackathondb");
+    const collection = db.collection("chats");
 
     const result = await collection.deleteMany({ chatId });
 

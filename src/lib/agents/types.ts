@@ -1,15 +1,15 @@
 export interface AgentState {
-  messages: any[];
+  messages: Array<{ role: string; content: string }>;
   next?: string;
   intent?: string;
-  decision?: any;
-  result?: any;
+  decision?: Record<string, unknown>;
+  result?: unknown;
   roomId: string;
   userId: string;
 }
 
 export interface ToolCall {
   name: string;
-  arguments: any;
-  result?: any;
+  arguments: Record<string, unknown>;
+  result?: unknown;
 }

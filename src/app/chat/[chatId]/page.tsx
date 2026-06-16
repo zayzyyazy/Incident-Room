@@ -9,19 +9,25 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   tools_called?: ToolCall[];
+  toolsCalled?: ToolCall[];
+  roomId?: string;
+  workflowTrace?: unknown[];
+  analyzer?: unknown;
+  evidence?: unknown;
+  investigationInput?: unknown;
+  incident?: unknown;
   timestamp: Date;
 }
 
 interface ToolCall {
   name: string;
-  arguments: any;
-  result?: any;
+  arguments: Record<string, unknown>;
+  result?: unknown;
 }
 
-interface ChatHistory {
-  chat_id: string;
-  messages: Message[];
-}
+type ApiChatMessage = Omit<Message, 'timestamp'> & {
+  timestamp: string | Date;
+};
 
 export default function ChatPage() {
   const params = useParams();
@@ -67,8 +73,9 @@ const loadChatHistory = async () => {
     console.log("📊 Message count:", data.messages?.length);
     
     if (data.messages && data.messages.length > 0) {
-      const formattedMessages = data.messages.map((msg: any) => ({
+      const formattedMessages = data.messages.map((msg: ApiChatMessage) => ({
         ...msg,
+        tools_called: msg.tools_called ?? msg.toolsCalled ?? [],
         timestamp: new Date(msg.timestamp)
       }));
       console.log("✅ Setting messages:", formattedMessages.length);
@@ -126,6 +133,13 @@ const loadChatHistory = async () => {
       role: 'assistant' as const,
       content: data.reply,
       tools_called: data.tools_called || [],
+      toolsCalled: data.tools_called || [],
+      roomId: data.roomId,
+      workflowTrace: data.workflow_trace || [],
+      analyzer: data.analyzer,
+      evidence: data.evidence,
+      investigationInput: data.investigation_input,
+      incident: data.incident,
       timestamp: new Date()
     };
 
@@ -141,7 +155,13 @@ const loadChatHistory = async () => {
         role: 'assistant',
         content: data.reply,
         intent: data.intent,
-        toolsCalled: data.tools_called
+        toolsCalled: data.tools_called,
+        roomId: data.roomId,
+        workflowTrace: data.workflow_trace,
+        analyzer: data.analyzer,
+        evidence: data.evidence,
+        investigationInput: data.investigation_input,
+        incident: data.incident
       })
     });
 
@@ -224,9 +244,9 @@ const loadChatHistory = async () => {
                           {message.tools_called.map((tool, idx) => (
                             <div key={idx} className="bg-gray-50 p-1 rounded">
                               <span className="font-mono font-semibold">{tool.name}</span>
-                              {tool.result && (
+                              {tool.result != null && (
                                 <div className="text-gray-600 mt-1">
-                                  Result: {JSON.stringify(tool.result, null, 2)}
+                                  Result: {JSON.stringify(tool.result, null, 2) ?? String(tool.result)}
                                 </div>
                               )}
                             </div>
