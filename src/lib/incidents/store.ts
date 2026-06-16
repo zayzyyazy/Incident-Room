@@ -1,13 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { VoiceIncidentEvidenceSchema } from "@/lib/evidence/types";
+import {
+  VoiceIncidentEvidence,
+  VoiceIncidentEvidenceSchema,
+} from "@/lib/evidence/types";
 import {
   IncidentRecord,
   IncidentSummary,
   InvestigationRun,
 } from "@/lib/incidents/types";
-
 const incidents = new Map<string, IncidentRecord>();
+const FAILED_CHAT_FILE_PREFIX = "failed-chat-";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const IMPORTED_INCIDENTS_PATH = path.join(DATA_DIR, "imported-incidents.json");
@@ -92,6 +95,17 @@ function loadFixtureFile(fixturePath: string) {
   return VoiceIncidentEvidenceSchema.parse(JSON.parse(raw));
 }
 
+function sanitizeFilePart(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+/g, "-");
+}
+
+function failedChatEvidencePath(evidence: VoiceIncidentEvidence) {
+  return path.join(
+    process.cwd(),
+    `${FAILED_CHAT_FILE_PREFIX}${sanitizeFilePart(evidence.incident_id)}.json`,
+  );
+}
+
 function fixturePathsOnDisk(): string[] {
   const roots = [
     path.join(process.cwd(), "fixtures"),
@@ -110,6 +124,13 @@ function fixturePathsOnDisk(): string[] {
       }
     }
   }
+
+  for (const entry of fs.readdirSync(process.cwd())) {
+    if (entry.startsWith(FAILED_CHAT_FILE_PREFIX) && entry.endsWith(".json")) {
+      paths.push(path.join(process.cwd(), entry));
+    }
+  }
+
   return paths;
 }
 
@@ -171,6 +192,7 @@ function loadIncidentFromDisk(id: string): IncidentRecord | undefined {
 export function listIncidents(): IncidentSummary[] {
   seedIfEmpty();
   mergeMissingIncidentsFromDisk();
+  seedFromDisk();
 
   return Array.from(incidents.values())
     .map((incident) => {
@@ -199,6 +221,7 @@ export function getIncident(id: string): IncidentRecord | undefined {
   seedIfEmpty();
   mergeMissingIncidentsFromDisk();
 
+  seedFromDisk();
   const cached = incidents.get(id);
   if (cached) {
     return cached;
@@ -238,6 +261,13 @@ export function upsertIncidentFromEvidence(
   incidents.set(evidence.incident_id, created);
   persistImportedEvidence(evidence);
   return created;
+}
+
+export function persistFailedChatEvidence(evidence: VoiceIncidentEvidence) {
+  const parsed = VoiceIncidentEvidenceSchema.parse(evidence);
+  const filePath = failedChatEvidencePath(parsed);
+  fs.writeFileSync(filePath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
+  return filePath;
 }
 
 export function startInvestigation(incidentId: string): InvestigationRun {

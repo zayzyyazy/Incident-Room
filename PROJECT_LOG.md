@@ -12,6 +12,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 **Status (as of Sun 15 Jun 2026):** **Cause Room architecture locked and implemented in code.** Room 1 = Claim Tracer + Backend Witness + Causal Judge with **2 challenge rounds** and **Cause Finding** output. Legacy CA→OI pipeline kept for comparison.
 **Status (as of Mon 15 Jun 2026, 18:39 UTC):** Phase 0–1 demo is still working, and reply chat now routes agent handoffs through Band, records tool calls/history, and can turn ended support chats into dashboard incidents.
+**Status (as of Tue 16 Jun 2026, 20:25 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, Doer and Tool Executor depend on Band room assignment payloads rather than direct route handoff data, failed chats persist as root incident JSON files, and previous Mongo-stored chats for `user-123` can be reopened from a ChatGPT-style sidebar.
 
 **Locked architecture (read `PRODUCT.md`):**
 - **Room 1 — Cause Room:** What happened? → Cause Finding + evolution + recurrence hint
@@ -115,6 +116,62 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 **Next tonight/tomorrow:** Failure Synthesizer v1, then push CRM code to GitHub for friend.
 
 ---
+### Tue 16 Jun 2026 — 20:25 — Direct handoff payloads removed
+
+**What happened:** Removed meaningful `intent`, transcript, and `decision` data from the route calls into Doer and Tool Executor.
+**Problem (if any):** Even after Band-first reads, the route still passed enough direct state for the agents to work without reading the Band handoff.
+**Fix / result:** `runDoer` now receives only room/user scaffolding and `runToolExecutor` receives no decision; their actual task inputs come from `handoff_to_doer` and `tool_executor_assignment` in the Band room.
+
+---
+
+### Tue 16 Jun 2026 — 20:18 — Band room handoffs are primary inputs
+
+**What happened:** Strengthened ReplyChat’s Band-of-agents workflow so Doer and Tool Executor read complete room handoff payloads before using direct state.
+**Problem (if any):** The previous flow posted handoffs to Band, but direct LangGraph inputs still carried enough data to look like Band was only an audit log.
+**Fix / result:** Supervisor now posts a full `handoff_to_doer` payload into Band, Doer reads it first, Doer posts `tool_executor_assignment`, and Tool Executor reads that first before running tools.
+
+---
+
+### Tue 16 Jun 2026 — 19:57 — Chat sidebar scoped to user-123
+
+**What happened:** Scoped the ReplyChat sidebar and chat history APIs to the single app user `user-123`.
+**Problem (if any):** The sidebar listed stored chats without a fixed user filter, while this demo app is meant to behave as one user.
+**Fix / result:** Chat storage now saves as `user-123`, history list/load/delete filter by that user, and the support tools still map `user-123` to the demo fixture customer for order/refund lookups.
+
+---
+
+### Tue 16 Jun 2026 — 19:51 — Previous chats sidebar
+
+**What happened:** Added a previous-chats sidebar to ReplyChat.
+**Problem (if any):** Chat messages were stored in Mongo, but there was no UI to browse old chat sessions.
+**Fix / result:** Added `/api/chat-history` to list stored chat summaries and rebuilt `/chat/[chatId]` with a sidebar for opening previous chats or starting a new one.
+
+---
+
+### Tue 16 Jun 2026 — 17:47 — Failed chats persist as dashboard JSON
+
+**What happened:** Failed ReplyChat sessions now write a full incident evidence JSON file at the repo root.
+**Problem (if any):** Failed chats were registered in memory, but they were not durable JSON inputs like the other incident review examples.
+**Fix / result:** Added root `failed-chat-*.json` persistence, made the incident store load those files, and verified a saved failed chat appears in the dashboard incident list format.
+
+---
+
+### Tue 16 Jun 2026 — 17:39 — Faulty place-order demo path
+
+**What happened:** Added a new `place_order` intent and a `placeOrder` tool for ReplyChat.
+**Problem (if any):** We needed a clean way to use our own chat agent transcript as incident evidence, with a backend failure that the customer cannot see.
+**Fix / result:** `placeOrder` now tells the customer the order was placed while recording `orderPlaced: false`, `sideEffectCreated: false`, and `status: error`; the chat becomes incident evidence automatically and starts the two-agent investigation best-effort.
+
+---
+
+### Tue 16 Jun 2026 — 17:13 — Reply chat uses Band remote-agent handoffs
+
+**What happened:** Added the configured Supervisor, Doer, and Tool Executor Band remote agents to each reply chat room and sent their assignments/handoffs as Band messages/events.
+**Problem (if any):** The app was posting workflow traces to Band, but the LangGraph agents still mostly shared state directly instead of reading the handoff from the Band room.
+**Fix / result:** Added Band role config from `.env`, room participant recruitment, per-agent API key posting, Band room payload parsing, and kept local execution as the safe fallback so chat behavior stays the same.
+
+---
+
 ### Mon 15 Jun 2026 — 18:39 — Reply chat now feeds investigations
 
 **What happened:** Reworked reply chat so Customer, Supervisor, Doer, Tool Executor, Assistant, and End Analyzer all post their handoffs/results through Band.

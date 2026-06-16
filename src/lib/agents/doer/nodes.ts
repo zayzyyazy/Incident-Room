@@ -1,4 +1,9 @@
 // src/lib/agents/doer/nodes.ts
+import {
+  postBandWorkflowEvent,
+  readBandWorkflowPayload,
+} from "@/lib/band/agent-workflow";
+
 export const DOER_NODE = "doer";
 
 type AgentMessage = {
@@ -6,19 +11,38 @@ type AgentMessage = {
   content: string;
 };
 
+type DoerDecision = {
+  action?: string;
+  tool?: string;
+  params?: Record<string, unknown>;
+  response?: string;
+  reasoning?: string;
+};
+
 type DoerState = {
   messages: AgentMessage[];
   roomId: string;
   userId: string;
   intent: string;
-  decision?: Record<string, unknown> | null;
+  decision?: DoerDecision | null;
+};
+
+type IntentPayload = {
+  intent?: string;
+};
+
+type DoerAssignmentPayload = {
+  intent?: string;
+  messages?: AgentMessage[];
+  userId?: string;
+  latest_message?: string;
 };
 
 function extractOrderIdFromMessages(messages: Array<{ role: string; content: string }>) {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (msg.role === 'user') {
-      const match = msg.content.match(/ORD[-\s]?[A-Z0-9]+/i);
+      const match = msg.content.match(/\bORD[-\s]?\d[A-Z0-9]*\b/i);
       if (match) {
         return match[0].toUpperCase().replace(/\s+/g, "-").replace(/^ORD-?/, "ORD-");
       }
@@ -28,16 +52,24 @@ function extractOrderIdFromMessages(messages: Array<{ role: string; content: str
 }
 
 export async function doerNode(state: DoerState) {
-  const intent = state.intent || "unknown";
+  const assignment = await readAssignmentFromBand(state);
+  const assignmentMessages = Array.isArray(assignment?.messages)
+    ? assignment.messages
+    : null;
+  const messages = assignmentMessages?.length ? assignmentMessages : state.messages;
+  const userId = assignment?.userId || state.userId;
+  const bandIntent = assignment?.intent ?? (await readIntentFromBand(state));
+  const intent = bandIntent || state.intent || "unknown";
   const latestUserMessage =
-    [...state.messages].reverse().find((msg) => msg.role === "user")
-      ?.content || "";
-  const extractedOrderId = extractOrderIdFromMessages(state.messages);
+    assignment?.latest_message ||
+    [...messages].reverse().find((msg) => msg.role === "user")?.content ||
+    "";
+  const extractedOrderId = extractOrderIdFromMessages(messages);
   
   const hasOrderId = extractedOrderId !== null;
   
   console.log(`📝 Doer processing - Intent: ${intent}, Has Order ID: ${hasOrderId}, Order ID: ${extractedOrderId}`);
-  console.log(`📝 Full conversation length: ${state.messages.length} messages`);
+  console.log(`📝 Full conversation length: ${messages.length} messages`);
   
   // Rule-based decision
   let decision;
@@ -47,7 +79,7 @@ export async function doerNode(state: DoerState) {
       decision = {
         action: "call_tool",
         tool: "checkOrderStatus",
-        params: { orderId: extractedOrderId, userId: state.userId },
+        params: { orderId: extractedOrderId, userId },
         reasoning: "Order ID found, fetching status"
       };
     } else {
@@ -65,7 +97,7 @@ export async function doerNode(state: DoerState) {
         tool: "askRefund",
         params: {
           orderId: extractedOrderId,
-          userId: state.userId,
+          userId,
           reason: latestUserMessage
         },
         reasoning: "Order ID found, opening refund request from live order data"
@@ -78,13 +110,24 @@ export async function doerNode(state: DoerState) {
       };
     }
   }
+  else if (intent === "place_order") {
+    decision = {
+      action: "call_tool",
+      tool: "placeOrder",
+      params: {
+        userId,
+        requestedItems: latestUserMessage,
+      },
+      reasoning: "Customer asked to place a new order"
+    };
+  }
   else if (intent === "human_handoff") {
     decision = {
       action: "call_tool",
       tool: "callHumanIntervention",
       params: {
         orderId: extractedOrderId,
-        userId: state.userId,
+        userId,
         reason: latestUserMessage || "Customer requested a human teammate"
       },
       reasoning: "Customer requested human intervention"
@@ -114,16 +157,80 @@ export async function doerNode(state: DoerState) {
   else {
     decision = {
       action: "direct",
-      response: "I can help with order status, refunds, or product information. How can I assist you today?",
+      response: "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
       reasoning: "Unknown intent"
     };
   }
   
   console.log(`✅ Doer decision: ${decision.action}${decision.tool ? ` - ${decision.tool}` : ''}`);
+  await writeDecisionToBand(state, intent, decision, userId);
   
   return {
     ...state,
     decision,
-    messages: [...state.messages, { role: "assistant", content: `Decision: ${decision.action}` }]
+    messages: [...messages, { role: "assistant", content: `Decision: ${decision.action}` }]
   };
+}
+
+async function readAssignmentFromBand(state: DoerState) {
+  try {
+    const payload = await readBandWorkflowPayload<DoerAssignmentPayload>(
+      state.roomId,
+      "handoff_to_doer",
+      "doer",
+    );
+    if (payload?.intent) {
+      console.log(`📡 Doer read full assignment from Band room ${state.roomId}: ${payload.intent}`);
+      return payload;
+    }
+  } catch (error) {
+    console.warn("Band doer assignment read failed", error);
+  }
+
+  return null;
+}
+
+async function readIntentFromBand(state: DoerState) {
+  try {
+    const payload = await readBandWorkflowPayload<IntentPayload>(
+      state.roomId,
+      "intent_analysis",
+      "doer",
+    );
+    if (payload?.intent) {
+      console.log(`📡 Doer read intent from Band room ${state.roomId}: ${payload.intent}`);
+      return payload.intent;
+    }
+  } catch (error) {
+    console.warn("Band doer intent read failed", error);
+  }
+
+  return null;
+}
+
+async function writeDecisionToBand(
+  state: DoerState,
+  intent: string,
+  decision: DoerDecision,
+  userId: string,
+) {
+  try {
+    await postBandWorkflowEvent(
+      "doer",
+      state.roomId,
+      decision.action === "call_tool" ? "tool_request" : "policy_decision",
+      {
+        intent,
+        decision,
+        userId,
+      },
+      {
+        mentionRole:
+          decision.action === "call_tool" ? "tool_executor" : undefined,
+        metadata: { intent, action: decision.action, tool: decision.tool },
+      },
+    );
+  } catch (error) {
+    console.warn("Band doer decision handoff failed", error);
+  }
 }

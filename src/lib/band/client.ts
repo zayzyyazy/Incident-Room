@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "https://api.band.ai";
+const DEFAULT_BASE_URL = "https://app.band.ai/api/v1";
 export class BandApiError extends Error {
   constructor(
     message: string,
@@ -11,7 +11,7 @@ export class BandApiError extends Error {
 }
 
 function getConfig(apiKeyOverride?: string) {
-  const apiKey = apiKeyOverride ?? process.env.BAND_API_KEY;
+  const apiKey = apiKeyOverride || process.env.BAND_API_KEY;
   const baseUrl = process.env.BAND_REST_URL ?? DEFAULT_BASE_URL;
 
   if (!apiKey) {
@@ -23,17 +23,12 @@ function getConfig(apiKeyOverride?: string) {
 
 async function bandFetch<T>(
   path: string,
-  init?: RequestInit & { apiKey?: string; baseUrl?: string },
+  init?: RequestInit,
+  apiKeyOverride?: string,
 ): Promise<T> {
-  const { apiKey, baseUrl } = getConfig(init?.apiKey);
-  const fetchInit = { ...(init ?? {}) } as RequestInit & {
-    apiKey?: string;
-    baseUrl?: string;
-  };
-  delete fetchInit.apiKey;
-  delete fetchInit.baseUrl;
-  const response = await fetch(`${init?.baseUrl ?? baseUrl}${path}`, {
-    ...fetchInit,
+  const { apiKey, baseUrl } = getConfig(apiKeyOverride);
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
@@ -78,6 +73,13 @@ export type BandMessageRecord = {
   metadata?: Record<string, unknown>;
 };
 
+export type BandParticipant = {
+  id: string;
+  handle?: string;
+  name?: string;
+  participant_id?: string;
+};
+
 function unwrapBandResource<T>(
   body: unknown,
   nestedKeys: string[] = [],
@@ -120,8 +122,8 @@ function requireId<T extends { id?: string }>(
   return value;
 }
 
-export async function getAgentProfile(): Promise<BandAgentProfile> {
-  const raw = await bandFetch<unknown>("/agent/me");
+export async function getAgentProfile(apiKey?: string): Promise<BandAgentProfile> {
+  const raw = await bandFetch<unknown>("/agent/me", undefined, apiKey);
   return requireId(
     "getAgentProfile",
     unwrapBandResource<BandAgentProfile>(raw, ["agent"]),
@@ -165,8 +167,9 @@ export async function postMessage(
   content: string,
   metadata?: Record<string, unknown>,
   mentions?: Array<{ id: string; handle?: string; name?: string }>,
+  apiKey?: string,
 ): Promise<BandMessageRecord> {
-  const me = await getAgentProfile();
+  const me = await getAgentProfile(apiKey);
 
   const resolvedMentions = mentions?.length
     ? mentions
@@ -183,11 +186,13 @@ export async function postMessage(
   // Band rejects self-mentions on /messages (cannot_mention_self).
   // Orchestrator posts are internal analysis → use /events (no mentions).
   if (mentionsSelf && !mentions?.length) {
-    return postAgentRoomUpdate(roomId, content, metadata);
+    return postAgentRoomUpdate(roomId, content, metadata, apiKey);
   }
 
-  const mentionHandle = resolvedMentions[0]?.handle ?? "incident-room";
-  const routedContent = content.includes("@")
+  const mentionHandle = normalizeBandHandle(
+    resolvedMentions[0]?.handle ?? "incident-room",
+  );
+  const routedContent = contentIncludesMention(content, resolvedMentions)
     ? content
     : `@${mentionHandle} ${content}`;
 
@@ -202,6 +207,7 @@ export async function postMessage(
         },
       }),
     },
+    apiKey,
   );
 
   return requireId(
@@ -215,6 +221,7 @@ export async function postAgentRoomUpdate(
   roomId: string,
   content: string,
   metadata?: Record<string, unknown>,
+  apiKey?: string,
 ): Promise<BandMessageRecord> {
   const raw = await bandFetch<unknown>(`/agent/chats/${roomId}/events`, {
     method: "POST",
@@ -225,7 +232,7 @@ export async function postAgentRoomUpdate(
         metadata,
       },
     }),
-  });
+  }, apiKey);
 
   const event = requireId(
     "postAgentRoomUpdate",
@@ -244,7 +251,7 @@ export async function postEvent(
   roomId: string,
   eventType: string,
   payload: Record<string, unknown>,
-  apiKeyOverride?: string,
+  apiKey?: string,
 ): Promise<unknown> {
   const { apiKey, baseUrl } = getConfig(apiKeyOverride);
 
@@ -262,23 +269,39 @@ export async function postEvent(
         metadata: payload.metadata as Record<string, unknown> | undefined,
       },
     }),
-  });
+  }, apiKey);
 }
 
-export async function getRoomHistory(roomId: string): Promise<BandMessageRecord[]> {
-  try {
-    return await fetchRoomContext(roomId);
-  } catch (error) {
-    // Orchestrator rooms post via /events; Band may not expose /context for them yet.
-    if (error instanceof BandApiError && error.status === 404) {
-      return [];
-    }
-    throw error;
-  }
+export async function addChatParticipant(
+  roomId: string,
+  participantId: string,
+  apiKey?: string,
+): Promise<BandParticipant> {
+  const raw = await bandFetch<unknown>(
+    `/agent/chats/${roomId}/participants`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        participant: {
+          participant_id: participantId,
+        },
+      }),
+    },
+    apiKey,
+  );
+
+  return unwrapBandResource<BandParticipant>(raw, ["participant"]);
 }
 
-async function fetchRoomContext(roomId: string): Promise<BandMessageRecord[]> {
-  const data = await bandFetch<unknown>(`/agent/chats/${roomId}/context`);
+export async function getRoomHistory(
+  roomId: string,
+  apiKey?: string,
+): Promise<BandMessageRecord[]> {
+  const data = await bandFetch<unknown>(
+    `/agent/chats/${roomId}/context`,
+    undefined,
+    apiKey,
+  );
 
   const unwrapped = unwrapBandResource<unknown>(data);
   const candidates = [unwrapped, data];
@@ -311,4 +334,21 @@ export function formatBandPost(
   payload: unknown,
 ): string {
   return `[${agentRole}] ${messageType}\n\n${JSON.stringify(payload, null, 2)}`;
+}
+
+function normalizeBandHandle(handle: string) {
+  return handle.replace(/^@+/, "");
+}
+
+function contentIncludesMention(
+  content: string,
+  mentions: Array<{ id: string; handle?: string; name?: string }>,
+) {
+  return mentions.some((mention) => {
+    if (!mention.handle) {
+      return false;
+    }
+
+    return content.includes(`@${normalizeBandHandle(mention.handle)}`);
+  });
 }
