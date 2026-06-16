@@ -1,4 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
+import { postBandWorkflowEvent } from "@/lib/band/agent-workflow";
 export const SUPERVISOR_NODE = "supervisor";
 // src/lib/agents/supervisor/nodes.ts
 
@@ -34,6 +35,32 @@ function classifyIntentFromText(text: string) {
   return "unknown";
 }
 
+async function writeIntentToBand(
+  state: SupervisorState,
+  intent: string,
+  latestUserMessage: string,
+) {
+  try {
+    await postBandWorkflowEvent(
+      "supervisor",
+      state.roomId,
+      "intent_analysis",
+      {
+        intent,
+        userId: state.userId,
+        latest_message: latestUserMessage,
+        transcript_turns: state.messages.length,
+      },
+      {
+        mentionRole: "doer",
+        metadata: { intent },
+      },
+    );
+  } catch (error) {
+    console.warn("Band supervisor intent handoff failed", error);
+  }
+}
+
 export async function supervisorNode(state: SupervisorState) {
   // Get all messages except the last assistant response
   const conversationMessages = state.messages.filter((msg) => msg.role !== 'assistant' || !msg.content.includes('Intent detected'));
@@ -44,6 +71,7 @@ export async function supervisorNode(state: SupervisorState) {
   if (!process.env.AIMLAPI_KEY && !process.env.BAND_API_KEY) {
     const fallbackIntent = classifyIntentFromText(latestUserMessage);
     console.log(`🎯 Intent fallback: ${fallbackIntent} from conversation`);
+    await writeIntentToBand(state, fallbackIntent, latestUserMessage);
 
     return {
       ...state,
@@ -91,6 +119,7 @@ Respond with ONLY the intent keyword.`;
     : classifyIntentFromText(latestUserMessage);
   
   console.log(`🎯 Intent: ${finalIntent} from conversation`);
+  await writeIntentToBand(state, finalIntent, latestUserMessage);
   
   return {
     ...state,

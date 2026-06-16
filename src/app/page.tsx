@@ -5,7 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ImportEvidencePanel } from "@/components/dashboard/ImportEvidencePanel";
 import { AppShell, Panel, StatusPill } from "@/components/ui/shell";
 import { IncidentSummary } from "@/lib/incidents/types";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
+
 function formatVerdict(value?: string) {
   if (!value) {
     return "—";
@@ -33,14 +34,26 @@ export default function DashboardPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-    const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+  const openReplyChat = () => {
+    const newChatId = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    router.push(`/chat/${newChatId}`);
+  };
+
   return (
     <AppShell
       title="Operations desk"
       subtitle="Incidents & investigation history"
+      actions={
+        <button
+          type="button"
+          onClick={openReplyChat}
+          className="rounded-lg border border-trace/40 bg-trace/10 px-4 py-2 text-sm font-medium text-trace shadow-glow-trace transition hover:border-trace/70 hover:bg-trace/20 focus:outline-none focus:ring-2 focus:ring-trace/30"
+        >
+          Open ReplyChat
+        </button>
+      }
     >
-      <button onClick={()=>{    router.push(`/chat/${newChatId}`)}}>Chat</button>
-
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Panel title="Incidents">
           <div className="overflow-x-auto">

@@ -1,4 +1,9 @@
 // src/lib/agents/doer/nodes.ts
+import {
+  postBandWorkflowEvent,
+  readBandWorkflowPayload,
+} from "@/lib/band/agent-workflow";
+
 export const DOER_NODE = "doer";
 
 type AgentMessage = {
@@ -6,12 +11,24 @@ type AgentMessage = {
   content: string;
 };
 
+type DoerDecision = {
+  action?: string;
+  tool?: string;
+  params?: Record<string, unknown>;
+  response?: string;
+  reasoning?: string;
+};
+
 type DoerState = {
   messages: AgentMessage[];
   roomId: string;
   userId: string;
   intent: string;
-  decision?: Record<string, unknown> | null;
+  decision?: DoerDecision | null;
+};
+
+type IntentPayload = {
+  intent?: string;
 };
 
 function extractOrderIdFromMessages(messages: Array<{ role: string; content: string }>) {
@@ -28,7 +45,8 @@ function extractOrderIdFromMessages(messages: Array<{ role: string; content: str
 }
 
 export async function doerNode(state: DoerState) {
-  const intent = state.intent || "unknown";
+  const bandIntent = await readIntentFromBand(state);
+  const intent = bandIntent || state.intent || "unknown";
   const latestUserMessage =
     [...state.messages].reverse().find((msg) => msg.role === "user")
       ?.content || "";
@@ -120,10 +138,55 @@ export async function doerNode(state: DoerState) {
   }
   
   console.log(`✅ Doer decision: ${decision.action}${decision.tool ? ` - ${decision.tool}` : ''}`);
+  await writeDecisionToBand(state, intent, decision);
   
   return {
     ...state,
     decision,
     messages: [...state.messages, { role: "assistant", content: `Decision: ${decision.action}` }]
   };
+}
+
+async function readIntentFromBand(state: DoerState) {
+  try {
+    const payload = await readBandWorkflowPayload<IntentPayload>(
+      state.roomId,
+      "intent_analysis",
+      "doer",
+    );
+    if (payload?.intent) {
+      console.log(`📡 Doer read intent from Band room ${state.roomId}: ${payload.intent}`);
+      return payload.intent;
+    }
+  } catch (error) {
+    console.warn("Band doer intent read failed", error);
+  }
+
+  return null;
+}
+
+async function writeDecisionToBand(
+  state: DoerState,
+  intent: string,
+  decision: DoerDecision,
+) {
+  try {
+    await postBandWorkflowEvent(
+      "doer",
+      state.roomId,
+      decision.action === "call_tool" ? "tool_request" : "policy_decision",
+      {
+        intent,
+        decision,
+        userId: state.userId,
+      },
+      {
+        mentionRole:
+          decision.action === "call_tool" ? "tool_executor" : undefined,
+        metadata: { intent, action: decision.action, tool: decision.tool },
+      },
+    );
+  } catch (error) {
+    console.warn("Band doer decision handoff failed", error);
+  }
 }

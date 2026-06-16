@@ -2,6 +2,10 @@
 // app/api/replychat/route.ts
 import { NextResponse } from "next/server";
 import { createRoom, postMessage, formatBandPost, getRoomHistory } from "@/lib/band/client";
+import {
+  postBandWorkflowAssignment,
+  recruitBandWorkflowAgents,
+} from "@/lib/band/agent-workflow";
 import { runSupervisor } from "@/lib/agents/supervisor/graph";
 import { runDoer } from "@/lib/agents/doer/graph";
 import { runToolExecutor } from "@/lib/agents/tool-executor/graph";
@@ -225,6 +229,8 @@ export async function POST(request: Request) {
     const room = await createRoom();
     const roomId = room.id;
     console.log(`🏠 Room ID: ${roomId}`);
+    const recruitment = await recruitBandWorkflowAgents(roomId);
+    console.log(`🤝 Band remote agents: ${JSON.stringify(recruitment)}`);
 
     const threadId = crypto.randomUUID();
 
@@ -241,11 +247,35 @@ export async function POST(request: Request) {
       transcript_turns: fullMessages.length,
     });
 
+    await postAgentStep(roomId, "00", "System", "band_remote_agents_recruited", {
+      agents: recruitment,
+      protocol:
+        "Configured Band remote agents are added as room participants and receive directed @mentions for each handoff.",
+    });
+
     await postAgentStep(roomId, "01", "System", "supervisor_assignment", {
       instruction:
         "Supervisor, classify the latest customer intent using the chat transcript posted to this Band room.",
       latest_message: message,
     });
+    try {
+      await postBandWorkflowAssignment(
+        roomId,
+        "supervisor",
+        "supervisor_assignment",
+        {
+          instruction:
+            "Classify the latest customer intent using the chat transcript posted to this Band room, then hand the intent to Doer in Band.",
+          latest_message: message,
+          chatId,
+          userId,
+          transcript_turns: fullMessages.length,
+        },
+        { chatId, userId },
+      );
+    } catch (error) {
+      console.warn("Band supervisor assignment mention failed", error);
+    }
 
     // Step 1: Supervisor with FULL history
     const supervisorResult = await runSupervisor(

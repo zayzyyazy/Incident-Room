@@ -1,5 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  postBandWorkflowEvent,
+  readBandWorkflowPayload,
+} from "@/lib/band/agent-workflow";
 
 export const TOOL_EXECUTOR_NODE = "tool_executor";
 
@@ -40,6 +44,10 @@ type ToolExecutorState = {
   } | null;
   result: string;
   toolCalls: ToolExecution[];
+};
+
+type ToolRequestPayload = {
+  decision?: ToolExecutorState["decision"];
 };
 
 function normalizeOrderId(orderId?: string) {
@@ -215,7 +223,7 @@ export async function executeSupportTool(
 }
 
 export async function toolExecutorNode(state: ToolExecutorState) {
-  const decision = state.decision;
+  const decision = (await readDecisionFromBand(state)) ?? state.decision;
   let result = "Tool execution failed";
   let toolCall: ToolExecution | null = null;
   
@@ -232,6 +240,7 @@ export async function toolExecutorNode(state: ToolExecutorState) {
     result = decision?.response || "I'm not sure how to help with that. Could you rephrase?";
     console.log(`❓ Fallback response`);
   }
+  await writeExecutionResultToBand(state, decision, result, toolCall);
   
   return {
     ...state,
@@ -239,4 +248,51 @@ export async function toolExecutorNode(state: ToolExecutorState) {
     toolCalls: toolCall ? [...(state.toolCalls ?? []), toolCall] : state.toolCalls ?? [],
     messages: [...state.messages, { role: "assistant", content: result }]
   };
+}
+
+async function readDecisionFromBand(state: ToolExecutorState) {
+  try {
+    const payload = await readBandWorkflowPayload<ToolRequestPayload>(
+      state.roomId,
+      "tool_request",
+      "tool_executor",
+    );
+    if (payload?.decision) {
+      console.log(`📡 Tool Executor read request from Band room ${state.roomId}`);
+      return payload.decision;
+    }
+  } catch (error) {
+    console.warn("Band tool executor request read failed", error);
+  }
+
+  return null;
+}
+
+async function writeExecutionResultToBand(
+  state: ToolExecutorState,
+  decision: ToolExecutorState["decision"],
+  result: string,
+  toolCall: ToolExecution | null,
+) {
+  try {
+    await postBandWorkflowEvent(
+      "tool_executor",
+      state.roomId,
+      "execution_result",
+      {
+        decision,
+        result,
+        toolCall,
+        userId: state.userId,
+      },
+      {
+        metadata: {
+          tool: decision?.tool,
+          status: toolCall?.status,
+        },
+      },
+    );
+  } catch (error) {
+    console.warn("Band tool executor result handoff failed", error);
+  }
 }
