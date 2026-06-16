@@ -35,7 +35,7 @@ function extractOrderIdFromMessages(messages: Array<{ role: string; content: str
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (msg.role === 'user') {
-      const match = msg.content.match(/ORD[-\s]?[A-Z0-9]+/i);
+      const match = msg.content.match(/\bORD[-\s]?\d[A-Z0-9]*\b/i);
       if (match) {
         return match[0].toUpperCase().replace(/\s+/g, "-").replace(/^ORD-?/, "ORD-");
       }

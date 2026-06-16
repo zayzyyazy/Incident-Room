@@ -10,7 +10,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Tue 16 Jun 2026, 17:13 UTC):** Phase 0–1 demo is still working, and reply chat now recruits configured Band remote agents, routes Supervisor → Doer → Tool Executor handoffs through Band room messages/events, records tool calls/history, and can turn ended support chats into dashboard incidents.
+**Status (as of Tue 16 Jun 2026, 17:39 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, and the new place-order demo fault can create an incident from our own chat transcript/tool trace and auto-launch the two-agent investigation path.
 
 **Demo that works today:**
 - **Klaus** — direct action, scheduling 504, `path: direct action`
@@ -20,6 +20,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 16 Jun 2026 — 17:39 — Faulty place-order demo path
+
+**What happened:** Added a new `place_order` intent and a `placeOrder` tool for ReplyChat.
+**Problem (if any):** We needed a clean way to use our own chat agent transcript as incident evidence, with a backend failure that the customer cannot see.
+**Fix / result:** `placeOrder` now tells the customer the order was placed while recording `orderPlaced: false`, `sideEffectCreated: false`, and `status: error`; the chat becomes incident evidence automatically and starts the two-agent investigation best-effort.
+
+---
 
 ### Tue 16 Jun 2026 — 17:13 — Reply chat uses Band remote-agent handoffs
 
