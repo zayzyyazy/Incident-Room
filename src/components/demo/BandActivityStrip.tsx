@@ -58,6 +58,26 @@ function summarizeMessage(m: AgentFeedMessage): string {
       return "LocalizationFinding artifact";
     case "LocalizationFinding":
       return "LocalizationFinding posted";
+    case "SpecialistRecruited":
+      return `Recruited @${(payload as { recruit?: string }).recruit ?? "specialist"}`;
+    case "EvidenceRequested":
+      return "Evidence requested from Normalizer";
+    case "EvidenceReturned":
+      return "Normalizer returned evidence";
+    case "InvestigationOpened":
+      return "Investigation opened";
+    case "FixTargetIssued":
+      return "Fix target";
+    case "TheoryWithdrawn":
+      return "Theory withdrawn (hero)";
+    case "RoomChallenge":
+      return "Cross-room challenge";
+    case "VerdictIssued":
+      return "Verdict issued";
+    case "ExplanationIssued":
+      return "Explanation issued";
+    case "ConfidenceChanged":
+      return "Confidence changed";
     default:
       return type.replace(/_/g, " ");
   }
@@ -129,7 +149,7 @@ export function BandActivityStrip({
 
         <div>
           <p className="mb-2 text-[10px] font-semibold uppercase text-trace">
-            Cause Room
+            Verdict Room
           </p>
           <div className="space-y-1">
             {causeMessages.length === 0 ? (
@@ -154,11 +174,11 @@ export function BandActivityStrip({
 
         <div>
           <p className="mb-2 text-[10px] font-semibold uppercase text-command">
-            Localization Room
+            Explanation Room
           </p>
           <div className="space-y-1">
             {localizationMessages.length === 0 ? (
-              <p className="text-xs text-room-muted">Waiting on CauseFinding…</p>
+              <p className="text-xs text-room-muted">Waiting on specialists…</p>
             ) : (
               localizationMessages.map((m, i) => (
                 <FeedLine

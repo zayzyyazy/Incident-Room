@@ -30,11 +30,9 @@ yarn-error.log*
 # local runtime data (fake CRM edits, etc.)
 .data/
 
+# playwright browsers (npm run install:browsers)
+.playwright-browsers/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.playwright-browsers/
-.tmp-pw-dl/
-scripts/wk-snapshot
-.chrome-profile/
-.chrome.log

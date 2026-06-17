@@ -10,9 +10,9 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (as of Sun 15 Jun 2026):** **Cause Room architecture locked and implemented in code.** Room 1 = Claim Tracer + Backend Witness + Causal Judge with **2 challenge rounds** and **Cause Finding** output. Legacy CA→OI pipeline kept for comparison.
-**Status (as of Mon 15 Jun 2026, 18:39 UTC):** Phase 0–1 demo is still working, and reply chat now routes agent handoffs through Band, records tool calls/history, and can turn ended support chats into dashboard incidents.
-**Status (as of Tue 16 Jun 2026, 20:25 UTC):** Phase 0–1 demo is still working, reply chat now recruits configured Band remote agents, Doer and Tool Executor depend on Band room assignment payloads rather than direct route handoff data, failed chats persist as root incident JSON files, and previous Mongo-stored chats for `user-123` can be reopened from a ChatGPT-style sidebar.
+**Status (Tue 17 Jun 2026):** **Demo-ready + media captured** — 12 README screenshots + `incident-room-demo.webm` in `docs/screenshots/`. Hero: `retell_call_clinic_44102`. Reply chat + Mongo chat sidebar still on `main`.
+
+**Recording:** [docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md) (manual screen record) · automated assets via `npm run capture-demo`
 
 **Locked architecture (read `PRODUCT.md`):**
 - **Room 1 — Cause Room:** What happened? → Cause Finding + evolution + recurrence hint
@@ -29,6 +29,39 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Tue 17 Jun 2026 — README media + capture pipeline
+
+**Shipped:**
+- **`npm run capture-demo`** — Playwright script for 12 cropped README screenshots + `incident-room-demo.webm` walkthrough (`retell_call_clinic_44102`)
+- **`npm run install:browsers`** — uses official `playwright install chromium` into `.playwright-browsers/`
+- **Desk** — `retell_call_clinic_44102` added to demo submission list (shows on Operations Desk)
+- **README** — screenshot gallery synced to capture output filenames; video path documented
+- **Fixture** — `fixtures/seeded/test-retell-clinic-44102.json` for auto-seed on empty store
+
+**Run locally (agent env can't launch Chromium):**
+```bash
+npm run install:browsers && npm run dev
+npm run capture-demo
+```
+
+**Captured (17 Jun):** all 12 PNGs + `incident-room-demo.webm` in `docs/screenshots/`.
+
+---
+
+### Mon 16 Jun 2026 — Demo finalization (earned investigation bay)
+
+**Shipped:**
+- **Investigation Bay** — crew bar only shows **recruited** agents (lights up on join); stage slots per crewmate; theory strip + dialogue dock (balanced text)
+- **Call outcome** framing in live UI + PDF (`CALL OUTCOME`, not NOT JUSTIFIED headline)
+- **CRM** — 13 seed customers + `/api/crm/reseed` + Reload button
+- **Agents tab** — visual party grid (crewmates)
+- **Fix:** `getAgentDefinition` runtime error in live theater
+- **Docs:** `docs/DEMO_RECORDING.md`, README + desk hero incident hint
+
+**Hero demo path:** Desk → `retell_call_clinic_44102` → Theories (half screen) + Band (half screen) → Reports PDF
+
+---
 
 ### Sun 15 Jun 2026 — Localhost + Band UX + cross-room lock
 

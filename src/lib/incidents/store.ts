@@ -4,6 +4,7 @@ import {
   VoiceIncidentEvidence,
   VoiceIncidentEvidenceSchema,
 } from "@/lib/evidence/types";
+import { isDemoSubmissionIncident } from "@/lib/demo/submission-incidents";
 import {
   IncidentRecord,
   IncidentSummary,
@@ -189,12 +190,24 @@ function loadIncidentFromDisk(id: string): IncidentRecord | undefined {
   return undefined;
 }
 
+function isImportedIncident(
+  evidence: ReturnType<typeof VoiceIncidentEvidenceSchema.parse>,
+): boolean {
+  const layer = evidence.layer3_customer?._import;
+  return Boolean(layer && typeof layer === "object");
+}
+
 export function listIncidents(): IncidentSummary[] {
   seedIfEmpty();
   mergeMissingIncidentsFromDisk();
   seedFromDisk();
 
   return Array.from(incidents.values())
+    .filter(
+      (incident) =>
+        isDemoSubmissionIncident(incident.id) ||
+        isImportedIncident(incident.evidence),
+    )
     .map((incident) => {
       const last = incident.investigations.at(-1);
       return {

@@ -155,4 +155,9 @@ export const AGENT_MODELS = {
     model: "gpt-4o",
     fallback: { provider: "aimlapi" as const, model: "gpt-4o-mini" },
   },
+  reportSynthesizer: {
+    provider: "aimlapi" as const,
+    model: "gpt-4o-mini",
+    fallback: { provider: "aimlapi" as const, model: "gpt-4o" },
+  },
 };

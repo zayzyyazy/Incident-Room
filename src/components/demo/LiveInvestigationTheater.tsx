@@ -5,22 +5,14 @@ import {
   InvestigationStep,
   stepsFromInvestigationRun,
 } from "@/lib/demo/investigation-steps";
-import {
-  buildIncidentReportView,
-  buildTheoryConflictView,
-  bandRoomUrl,
-  isTheoryInvestigationDemo,
-} from "@/lib/demo/investigation-verdict-view";
-import { getAgentDefinition } from "@/lib/agents/registry";
+import { bandRoomUrl, isTheoryInvestigationDemo } from "@/lib/demo/investigation-verdict-view";
+import { isLocalBandRoom } from "@/lib/band/client";
 import { InvestigationRun } from "@/lib/incidents/types";
 import { VoiceIncidentEvidence } from "@/lib/evidence/types";
-import { IncidentReportHero } from "@/components/demo/IncidentReportHero";
-import { TheoryConflictPanel } from "@/components/demo/TheoryConflictPanel";
-import { WorkflowViewer } from "@/components/demo/WorkflowViewer";
-import {
-  KlausDemoGraph,
-  stageIdFromPointer,
-} from "@/lib/workflow/klaus-demo-graph";
+import { InvestigationGameLevel } from "@/components/demo/InvestigationGameLevel";
+import { KlausDemoGraph } from "@/lib/workflow/klaus-demo-graph";
+import { dialogueSummary } from "@/lib/demo/game-level";
+import { getAgentDefinition } from "@/lib/agents/registry";
 
 const COLLABORATION_KINDS = new Set([
   "agent_challenge",
@@ -35,6 +27,17 @@ const COLLABORATION_KINDS = new Set([
   "investigator_admission",
   "surface_attack",
   "surface_counterattack",
+  "SpecialistRecruited",
+  "EvidenceRequested",
+  "EvidenceReturned",
+  "RoomChallenge",
+  "ConfidenceChanged",
+  "TheoryChallenged",
+  "TheoryWithdrawn",
+  "TheoryProposed",
+  "TheorySupported",
+  "TheoryRefined",
+  "TheoryAccepted",
 ]);
 
 const THEORY_KINDS = new Set([
@@ -46,21 +49,49 @@ const THEORY_KINDS = new Set([
   "IncidentFinding",
 ]);
 
-const HIGHLIGHT_THEORY_KINDS = new Set([
-  "TheoryChallenge",
-  "TheoryWithdrawal",
-  "TheoryCounter",
-  "NormalizerRouting",
-  "NormalizerEvidenceRequest",
-]);
+function stepConfidence(step: InvestigationStep) {
+  const pctByKind: Record<string, number> = {
+    TheoryChallenge: 72,
+    TheoryChallenged: 72,
+    TheoryProposed: 74,
+    TheorySupported: 81,
+    TheoryRefined: 78,
+    TheoryAccepted: 86,
+    agent_challenge: 72,
+    TheoryOpening: 68,
+    TheoryCounter: 58,
+    TheoryWithdrawal: 45,
+    TheoryWithdrawn: 45,
+    ConfidenceChanged: 22,
+    RoomChallenge: 40,
+    TheorySynthesis: 81,
+    IncidentFinding: 88,
+  };
+  const pct = pctByKind[step.kind] ?? 64;
+  const label = pct >= 70 ? "High" : pct >= 60 ? "Medium" : "Low";
+  return { pct, label };
+}
 
-const ROOM_DISPLAY: Record<string, string> = {
-  cause: "Cause Room",
-  localization: "Architecture Room",
-  customer_reality: "Customer Reality Room",
-  system_reality: "System Reality Room",
-  theory_investigation: "Theory investigation",
-};
+function stepActionLabel(kind: string) {
+  const map: Record<string, string> = {
+    TheoryChallenge: "Challenges",
+    agent_challenge: "Challenges",
+    TheoryOpening: "Introduces theory",
+    TheoryCounter: "Counters",
+    TheoryWithdrawal: "Withdraws",
+    TheorySynthesis: "Synthesizes",
+    IncidentFinding: "Finds",
+    claim_tracer_initial: "Opens",
+    backend_witness_initial: "Opens",
+  };
+  return map[kind] ?? "Updates";
+}
+
+function relativeBeatTime(index: number, total: number) {
+  const ago = total - index - 1;
+  if (ago <= 0) return "Just now";
+  return `${ago} min ago`;
+}
 
 function AgentNode({
   agentId,
@@ -86,106 +117,59 @@ function AgentNode({
   );
 }
 
-function LiveSpotlight({ step }: { step: InvestigationStep }) {
-  const agent = getAgentDefinition(step.agentId);
-  const isConflict =
-    step.line.includes("@") ||
-    HIGHLIGHT_THEORY_KINDS.has(step.kind) ||
-    step.kind === "agent_challenge";
-
-  return (
-    <div
-      className={`rounded-2xl border p-5 transition-all duration-500 animate-fade-up ${
-        isConflict
-          ? "border-alert/50 bg-alert/10 ring-1 ring-alert/25"
-          : step.kind === "TheoryWithdrawal"
-            ? "border-signal/50 bg-signal/10 ring-1 ring-signal/25"
-            : step.room === "theory_investigation"
-              ? "border-trace/40 bg-trace/[0.06]"
-              : step.room === "cause"
-                ? "border-trace/40 bg-trace/[0.06]"
-                : "border-command/40 bg-command/[0.06]"
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <AgentNode agentId={step.agentId} active size="lg" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`text-xs font-semibold uppercase tracking-wider ${agent?.accentClass ?? ""}`}
-            >
-              {step.headline}
-            </span>
-            <span className="text-[10px] text-room-muted">
-              {step.agentLabel} · {ROOM_DISPLAY[step.room] ?? step.room}
-            </span>
-            {step.crossRoom ? (
-              <span className="text-[10px] font-semibold uppercase text-alert">
-                ⇄ cross-room
-              </span>
-            ) : null}
-          </div>
-          <p
-            className={`mt-3 text-lg font-semibold leading-snug ${
-              step.line.includes("@") ? "font-mono text-[15px] text-foreground" : "text-foreground"
-            }`}
-          >
-            {step.line}
-          </p>
-          {step.subline ? (
-            <p className="mt-2 text-sm text-room-muted">{step.subline}</p>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function FlowBeat({
   step,
   active,
+  index,
+  total,
 }: {
   step: InvestigationStep;
   active: boolean;
+  index: number;
+  total: number;
 }) {
   const agent = getAgentDefinition(step.agentId);
-  const isConflict =
-    step.line.includes("@") ||
-    HIGHLIGHT_THEORY_KINDS.has(step.kind) ||
-    step.crossRoom;
+  const { pct, label } = stepConfidence(step);
+  const action = stepActionLabel(step.kind);
+  const isChallenge = step.kind === "TheoryChallenge" || step.kind === "agent_challenge";
 
   return (
     <div
-      className={`flex gap-2.5 rounded-lg border px-3 py-2 transition-all ${
-        active
-          ? "border-signal/50 bg-signal/5 ring-1 ring-signal/20"
-          : isConflict
-            ? "border-alert/30 bg-alert/[0.04]"
-            : step.kind === "TheoryWithdrawal"
-              ? "border-signal/30 bg-signal/[0.04]"
-              : "border-room-border/60 bg-room-elevated/40"
+      className={`flex gap-3 border-b border-room-border/50 px-1 py-3 last:border-0 ${
+        active ? "bg-room-elevated/30" : ""
       }`}
     >
       <AgentNode agentId={step.agentId} active={active} />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`text-[10px] font-semibold ${agent?.accentClass ?? ""}`}>
-            {step.headline}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] text-room-muted">
+            {relativeBeatTime(index, total)}
           </span>
-          <span className="text-[9px] uppercase text-room-muted">
-            {step.agentShort}
+          <span className={`text-xs font-semibold ${agent?.accentClass ?? ""}`}>
+            {step.agentShort} {step.agentLabel.split(" ")[0]}
+          </span>
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+              isChallenge
+                ? "bg-alert/15 text-alert"
+                : step.kind === "TheoryWithdrawal"
+                  ? "bg-signal/15 text-signal"
+                  : "bg-trace/10 text-trace"
+            }`}
+          >
+            {action}
           </span>
         </div>
-        <p
-          className={`mt-0.5 text-xs leading-relaxed ${
-            step.line.includes("@") ? "font-mono text-alert" : "text-foreground"
-          }`}
-        >
-          {step.line}
+        <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-foreground">
+          {dialogueSummary(step, 100)}
         </p>
         {step.subline ? (
-          <p className="mt-0.5 text-[10px] text-room-muted">{step.subline}</p>
+          <p className="mt-1 text-xs text-room-muted">{step.subline}</p>
         ) : null}
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-sm font-semibold text-foreground">{pct}%</p>
+        <p className="text-[10px] text-room-muted">{label}</p>
       </div>
     </div>
   );
@@ -198,6 +182,7 @@ export function LiveInvestigationTheater({
   initialRun,
   onComplete,
   onStatusChange,
+  onGoToReports,
 }: {
   incidentId: string;
   evidence: VoiceIncidentEvidence;
@@ -207,6 +192,7 @@ export function LiveInvestigationTheater({
   onStatusChange?: (
     status: "idle" | "connecting" | "live" | "complete" | "error",
   ) => void;
+  onGoToReports?: () => void;
 }) {
   const hydrated = initialRun ? stepsFromInvestigationRun(initialRun) : [];
   const [status, setStatus] = useState<
@@ -221,7 +207,14 @@ export function LiveInvestigationTheater({
   );
   const [run, setRun] = useState<InvestigationRun | null>(initialRun ?? null);
   const [showEvidence, setShowEvidence] = useState(false);
-  const [showArgument, setShowArgument] = useState(false);
+
+  const earnedRun = run?.pipeline === "earned_investigation" || Boolean(run?.earnedInvestigation);
+  const bandRoomId = run?.earnedInvestigation?.verdictRoomId ?? run?.roomId;
+  const bandIsLocal = Boolean(bandRoomId && isLocalBandRoom(bandRoomId));
+  const bandUrl = bandRoomUrl(bandRoomId);
+  const hasRemoteBandPosts =
+    run?.bandMessageIds &&
+    Object.values(run.bandMessageIds).some((id) => !String(id).startsWith("local"));
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const liveFeedRef = useRef<HTMLDivElement>(null);
@@ -235,25 +228,7 @@ export function LiveInvestigationTheater({
 
   const theoryDemo = isTheoryInvestigationDemo(evidence);
 
-  const report = useMemo(
-    () => buildIncidentReportView(evidence, run),
-    [evidence, run],
-  );
-
-  const conflict = useMemo(
-    () => buildTheoryConflictView(run, steps),
-    [run, steps],
-  );
-
   const currentStep = currentIndex >= 0 ? steps[currentIndex] : null;
-
-  const highlightStageId =
-    run?.localizationRoom?.localizationFinding?.primary_surface.pointer
-      .native_pointer &&
-    stageIdFromPointer(
-      run.localizationRoom.localizationFinding.primary_surface.pointer
-        .native_pointer,
-    );
 
   const theorySteps = steps.filter((s) => THEORY_KINDS.has(s.kind));
 
@@ -291,7 +266,6 @@ export function LiveInvestigationTheater({
     setError(null);
     setRun(null);
     setShowEvidence(false);
-    setShowArgument(false);
     setStatusBoth("connecting");
 
     const es = new EventSource(
@@ -316,9 +290,6 @@ export function LiveInvestigationTheater({
             setCurrentIndex(next.length - 1);
             return next;
           });
-          if (HIGHLIGHT_THEORY_KINDS.has(data.step.kind)) {
-            setShowArgument(true);
-          }
         }
 
         if (data.type === "complete" && data.run) {
@@ -369,44 +340,80 @@ export function LiveInvestigationTheater({
     };
   }, []);
 
-  const bandUrl = bandRoomUrl(
-    run?.realityCollision?.investigationRoomId ?? run?.roomId,
-  );
-
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-room-border bg-room-panel px-4 py-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-room-muted">
-            {complete
-              ? "Investigation complete"
-              : live
-                ? "Live · competing theories"
-                : "Ready to investigate"}
-          </p>
-          <p className="mt-0.5 text-xs text-room-muted">
-            {complete
-              ? theoryDemo
-                ? "Incident report — theories tested until one survived."
-                : "Review agent findings and evidence trail."
-              : live
-                ? theoryDemo
-                  ? "Watch theories collide — challenges, counters, and withdrawals."
-                  : "Watch agents challenge, withdraw, and revise in real time."
-                : theoryDemo
-                  ? "Two opening theories · one must lose."
-                  : "Prove belief vs reality, then show where to fix."}
+      {bandIsLocal && (complete || live) ? (
+        <div className="rounded-xl border border-signal/40 bg-signal/[0.08] px-4 py-3 text-sm text-room-muted">
+          <p className="font-medium text-signal">Band room limit reached (100/100)</p>
+          <p className="mt-1 text-xs leading-relaxed">
+            Posts ran in local-only mode — nothing appears on app.band.ai. Add{" "}
+            <code className="text-trace">BAND_REUSE_ROOM_ID</code> to{" "}
+            <code className="text-trace">.env.local</code> (UUID of an existing Band
+            chat), restart dev server, then Run again.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={start}
-          disabled={live}
-          className="rounded-lg border border-signal/50 bg-signal/15 px-4 py-2 text-sm font-semibold text-signal transition hover:bg-signal/25 disabled:opacity-50"
+      ) : null}
+
+      {!bandIsLocal && bandUrl && (live || (complete && hasRemoteBandPosts)) ? (
+        <a
+          href={bandUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-lg border border-trace/40 bg-trace/[0.06] px-3 py-2 text-xs font-medium text-trace hover:bg-trace/10"
         >
-          {live ? "Investigating…" : complete ? "Run again" : "Run investigation"}
-        </button>
-      </div>
+          Open Band room ↗
+        </a>
+      ) : null}
+      {!live && !complete ? (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-room-border bg-room-panel px-5 py-4">
+          <p className="text-sm text-room-muted">Recruit specialists · contest theories · earn a call outcome.</p>
+          <button
+            type="button"
+            onClick={start}
+            className="rounded-lg border border-signal/50 bg-signal/15 px-5 py-2.5 text-sm font-semibold text-signal transition hover:bg-signal/25"
+          >
+            Run investigation
+          </button>
+        </div>
+      ) : null}
+
+      {(live || complete) && (steps.length > 0 || live) ? (
+        <InvestigationGameLevel
+          steps={steps}
+          activeIndex={currentIndex}
+          live={live}
+          complete={complete}
+          immersive={live && !complete}
+          bandUrl={bandIsLocal ? undefined : bandUrl}
+        />
+      ) : null}
+
+      {complete && !live ? (
+        <div className="rounded-xl border border-trace/40 bg-trace/[0.08] px-4 py-3 text-sm text-room-muted">
+          <p className="font-semibold text-trace">Done — open Reports for the audit memo.</p>
+          {onGoToReports ? (
+            <button
+              type="button"
+              onClick={onGoToReports}
+              className="mt-2 rounded-lg border border-trace/50 bg-trace/15 px-3 py-1.5 text-xs font-semibold text-trace hover:bg-trace/25"
+            >
+              Reports →
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {complete && !live ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={start}
+            className="rounded-lg border border-room-border bg-room-elevated px-4 py-2 text-xs text-room-muted hover:text-foreground"
+          >
+            Run again
+          </button>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-lg border border-alert/40 bg-alert/10 px-4 py-3 text-sm text-alert">
@@ -414,68 +421,32 @@ export function LiveInvestigationTheater({
         </div>
       ) : null}
 
-      {complete && run && report.finding !== "Investigation incomplete" ? (
-        <>
-          <IncidentReportHero report={report} bandRoomUrl={bandUrl} />
-
-          {conflict.show ? (
-            <TheoryConflictPanel
-              conflict={conflict}
-              collapsed={!showArgument}
-              onToggle={() => setShowArgument((v) => !v)}
-            />
-          ) : null}
-        </>
-      ) : null}
-
-      {live && currentStep ? (
-        <LiveSpotlight step={currentStep} />
-      ) : live ? (
-        <div className="rounded-xl border border-room-border bg-room-panel px-4 py-8 text-center text-sm text-room-muted animate-pulse">
-          Connecting to Band…
-        </div>
-      ) : null}
-
-      {live && liveFeedSteps.length > 0 ? (
-        <div className="rounded-xl border border-room-border bg-room-panel">
-          <div className="border-b border-room-border px-4 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-room-muted">
-              {theoryDemo ? "Theory conflict" : "Live from Band"} · {liveFeedSteps.length}{" "}
-              {theoryDemo ? "beats" : `of ${steps.length} beats`}
-            </p>
+      {(live || complete) && liveFeedSteps.length > 0 && !live ? (
+        <details className="group rounded-xl border border-room-border/60 bg-room-panel/50">
+          <summary className="cursor-pointer list-none px-5 py-3 text-sm font-medium text-room-muted marker:content-none hover:text-foreground">
+            <span className="flex items-center justify-between">
+              <span>Band transcript · {liveFeedSteps.length} beats</span>
+              <span className="text-trace group-open:rotate-180 transition-transform">▾</span>
+            </span>
+          </summary>
+          <div ref={liveFeedRef} className="max-h-[320px] overflow-y-auto border-t border-room-border px-4">
+            {[...liveFeedSteps].reverse().map((step, i) => {
+              const index = liveFeedSteps.length - 1 - i;
+              return (
+                <FlowBeat
+                  key={step.id}
+                  step={step}
+                  active={step.id === currentStep?.id}
+                  index={index}
+                  total={liveFeedSteps.length}
+                />
+              );
+            })}
           </div>
-          <div
-            ref={liveFeedRef}
-            className="max-h-[220px] space-y-2 overflow-y-auto p-3"
-          >
-            {recentLiveSteps.map((step) => (
-              <FlowBeat
-                key={step.id}
-                step={step}
-                active={step.id === currentStep?.id}
-              />
-            ))}
-          </div>
-        </div>
+        </details>
       ) : null}
 
-      {complete && run && workflow && highlightStageId ? (
-        <div className="rounded-xl border border-signal/30 bg-room-panel p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-signal">
-            Fix target in workflow
-          </p>
-          <div className="mt-3">
-            <WorkflowViewer
-              graph={workflow}
-              highlightStageId={highlightStageId}
-              showHighlight
-              compact
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {steps.length > 0 && (!complete || showEvidence) ? (
+      {steps.length > 0 && !live && (showEvidence || complete) ? (
         <div className="rounded-xl border border-room-border bg-room-panel">
           <button
             type="button"
@@ -495,12 +466,14 @@ export function LiveInvestigationTheater({
           </button>
 
           {showEvidence ? (
-            <div className="max-h-[320px] space-y-2 overflow-y-auto border-t border-room-border p-3">
-              {steps.map((step) => (
+            <div className="max-h-[320px] overflow-y-auto border-t border-room-border px-4">
+              {steps.map((step, index) => (
                 <FlowBeat
                   key={step.id}
                   step={step}
                   active={step.id === currentStep?.id}
+                  index={index}
+                  total={steps.length}
                 />
               ))}
             </div>
@@ -508,7 +481,7 @@ export function LiveInvestigationTheater({
         </div>
       ) : null}
 
-      {complete && !showEvidence ? (
+      {steps.length > 0 && !live && !showEvidence ? (
         <button
           type="button"
           onClick={() => setShowEvidence(true)}

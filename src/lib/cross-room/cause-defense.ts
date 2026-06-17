@@ -155,8 +155,9 @@ export function buildLiveCauseDefenseDecision(input: {
 
   if (profile?.insufficientForLocalization && profile.customerTurnCount === 0) {
     decision = "INSUFFICIENT_EVIDENCE";
-    defense =
-      `${profile.primaryFailureTool?.name ?? "Prerequisite tool"} failed · no customer utterance captured · call ${profile.callStatus ?? "incomplete"}.`;
+    defense = profile.failedTools.length
+      ? `${profile.primaryFailureTool?.name ?? "Tool"} failed · no customer utterance captured · call ${profile.callStatus ?? "incomplete"}.`
+      : `No failed tools and no customer speech — call ${profile.callStatus ?? "incomplete"} · nothing to investigate yet.`;
   } else if (
     profile?.identityCheckFailed &&
     profile.handoffSucceeded &&

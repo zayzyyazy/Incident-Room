@@ -67,6 +67,7 @@ export type LocalizationRoomRunResult = {
   investigationBreakthrough?: import("@/lib/localization-room/types").InvestigationBreakthrough;
 };
 
+import { EarnedInvestigationResult } from "@/lib/investigation/events";
 import { RealityCollisionResult } from "@/lib/reality/types";
 
 export type InvestigationRun = {
@@ -74,7 +75,7 @@ export type InvestigationRun = {
   startedAt: string;
   completedAt?: string;
   status: "running" | "complete" | "failed";
-  pipeline: "cause_room" | "full" | "legacy" | "reality_collision";
+  pipeline: "cause_room" | "full" | "legacy" | "reality_collision" | "no_actionable" | "earned_investigation";
   roomId?: string;
   localizationRoomId?: string;
   distinctBandAgents?: boolean;
@@ -94,6 +95,7 @@ export type InvestigationRun = {
   crmLink?: IncidentCrmLink;
   crmLookup?: CrmLookupResult;
   realityCollision?: RealityCollisionResult;
+  earnedInvestigation?: EarnedInvestigationResult;
 };
 
 export type IncidentStatus =

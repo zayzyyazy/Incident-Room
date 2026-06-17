@@ -34,6 +34,8 @@ export const CanonicalMechanismIdSchema = z.enum([
   "tool_never_invoked_on_intended_path",
   "success_confirmation_on_unreachable_tool_path",
   "error_swallowed_without_customer_block",
+  "healthy_call_no_customer_speech",
+  "healthy_call_with_customer_speech",
 ]);
 
 export type CanonicalMechanismId = z.infer<typeof CanonicalMechanismIdSchema>;

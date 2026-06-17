@@ -87,3 +87,14 @@ export function generateCustomerId(name: string): string {
     .slice(0, 24);
   return `cust_${slug || "customer"}_${Date.now().toString(36)}`;
 }
+
+/** Replace runtime CRM DB with fixture seed (demo reset). */
+export function reseedCrmFromFixture(): CrmCustomer[] {
+  ensureDataFile();
+  if (!fs.existsSync(SEED_PATH)) {
+    throw new Error("Seed file missing: fixtures/crm/customers.json");
+  }
+  const seed = fs.readFileSync(SEED_PATH, "utf8");
+  fs.writeFileSync(CRM_PATH, seed, "utf8");
+  return readDb().customers;
+}

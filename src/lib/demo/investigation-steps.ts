@@ -12,6 +12,8 @@ export type DemoPhase =
   | "reconciliation"
   | "theory_investigation"
   | "normalizer"
+  | "verdict"
+  | "explanation"
   | "complete";
 
 export type InvestigationRoom =
@@ -21,7 +23,9 @@ export type InvestigationRoom =
   | "system_reality"
   | "reconciliation"
   | "theory_investigation"
-  | "normalizer";
+  | "normalizer"
+  | "verdict"
+  | "explanation";
 
 export type InvestigationStep = {
   id: string;
@@ -86,6 +90,21 @@ const DEMO_VISIBLE_KINDS = new Set([
   "NormalizerRouting",
   "NormalizerEvidenceRequest",
   "NormalizerEvidenceDelivery",
+  "InvestigationOpened",
+  "EvidenceRequested",
+  "EvidenceReturned",
+  "SpecialistRecruited",
+  "TheoryProposed",
+  "TheoryChallenged",
+  "TheorySupported",
+  "TheoryRefined",
+  "TheoryWithdrawn",
+  "TheoryAccepted",
+  "ConfidenceChanged",
+  "RoomChallenge",
+  "VerdictIssued",
+  "ExplanationIssued",
+  "FixTargetIssued",
 ]);
 
 let stepCounter = 0;
@@ -113,8 +132,17 @@ export function demoStepPaceMs(step: InvestigationStep): number {
   if (step.kind === "IncidentFinding") return 2800;
   if (step.kind === "TheorySynthesis") return 2400;
   if (step.kind === "TheoryChallenge" || step.kind === "TheoryCounter") return 2200;
-  if (step.kind === "TheoryWithdrawal") return 2000;
-  if (step.kind === "TheoryOpening") return 1800;
+  if (step.kind === "TheoryWithdrawn" || step.kind === "TheoryWithdrawal") return 2800;
+  if (step.kind === "InvestigationOpened") return 2400;
+  if (step.kind === "TheoryOpening") return 2000;
+  if (step.kind === "SpecialistRecruited") return 2800;
+  if (step.kind === "EvidenceRequested" || step.kind === "EvidenceReturned") return 3000;
+  if (step.kind === "TheoryProposed" || step.kind === "TheorySupported") return 2800;
+  if (step.kind === "TheoryChallenged") return 3200;
+  if (step.kind === "TheoryRefined" || step.kind === "TheoryAccepted") return 2800;
+  if (step.kind === "RoomChallenge") return 3000;
+  if (step.kind === "ConfidenceChanged") return 2900;
+  if (step.kind === "VerdictIssued" || step.kind === "ExplanationIssued" || step.kind === "FixTargetIssued") return 2600;
   if (step.kind === "CustomerRealityVerdict" || step.kind === "SystemRealityVerdict") {
     return 2200;
   }
@@ -153,7 +181,58 @@ function firstLine(content?: string): string {
   return content.split("\n")[0]?.trim() ?? "";
 }
 
+function earnedPayloadLine(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const line = String((payload as { line?: string }).line ?? "").trim();
+  return line.length > 0 ? line : undefined;
+}
+
+/** Band posts lead with EVENT LABEL; narrative lives in payload.line or later markdown lines. */
+function extractEarnedNarrative(content: string, payload?: unknown): string {
+  const fromPayload = earnedPayloadLine(payload);
+  if (fromPayload) return fromPayload;
+
+  const stripped = content.replace(/\*\*/g, "").trim();
+  if (!stripped) return "";
+
+  const speaker = stripped.match(
+    /(?:^|\n)(?:⚠️|📊|📈|🔧|❌|✅)?\s*[A-Za-z][^:\n]{0,48}:\s*([\s\S]+)/,
+  );
+  if (speaker?.[1]) {
+    const body = speaker[1]
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .filter((l) => !/^(high|medium|low)\s*\(/i.test(l))
+      .filter((l) => !/→/.test(l) || l.length > 24)[0];
+    if (body) return clip(body.replace(/\*\*/g, ""), 280);
+  }
+
+  const recruited = stripped.match(
+    /recruited\s+[A-Za-z][\w\s]+\.?\s*\n+([\s\S]+)/i,
+  );
+  if (recruited?.[1]) return clip(recruited[1].trim(), 280);
+
+  const lines = stripped
+    .split("\n")
+    .map((l) => l.replace(/^[⚠️📊📈🔧❌✅▶📦⚡⚔✕⚖📜🎯•\s]+/, "").trim())
+    .filter(Boolean);
+
+  for (const line of lines) {
+    if (/^[A-Z0-9][A-Z0-9\s—-]{2,42}$/.test(line)) continue;
+    if (line.includes(":")) {
+      const after = line.split(":").slice(1).join(":").trim();
+      if (after.length > 12) return clip(after, 280);
+    }
+    if (line.length > 18) return clip(line, 280);
+  }
+
+  return clip(stripped.replace(/\n+/g, " "), 280);
+}
+
 function phaseForKind(kind: string, room: InvestigationRoom): DemoPhase {
+  if (room === "verdict") return "verdict";
+  if (room === "explanation") return "explanation";
   if (room === "normalizer") return "normalizer";
   if (room === "theory_investigation") return "reconciliation";
   if (room === "customer_reality") return "customer_reality";
@@ -226,6 +305,21 @@ function headlineForKind(kind: string): string {
     NormalizerRouting: "Evidence routed",
     NormalizerEvidenceRequest: "Evidence request",
     NormalizerEvidenceDelivery: "Evidence delivery",
+    InvestigationOpened: "Investigation opened",
+    EvidenceRequested: "Evidence requested",
+    EvidenceReturned: "Evidence returned",
+    SpecialistRecruited: "Specialist recruited",
+    TheoryProposed: "Theory proposed",
+    TheoryChallenged: "Theory challenged",
+    TheorySupported: "Theory supported",
+    TheoryRefined: "Theory refined",
+    TheoryWithdrawn: "Theory withdrawn",
+    TheoryAccepted: "Theory accepted",
+    ConfidenceChanged: "Confidence changed",
+    RoomChallenge: "Room challenge",
+    VerdictIssued: "Final verdict",
+    ExplanationIssued: "Surviving explanation",
+    FixTargetIssued: "Fix target",
   };
   return map[kind] ?? kind.replace(/_/g, " ");
 }
@@ -253,6 +347,12 @@ function crossRoomForKind(
   if (room === "cause" && kind === "CauseRevisionDecision") {
     return "from_cause";
   }
+  if (kind === "RoomChallenge" && room === "explanation") {
+    return "to_cause";
+  }
+  if (kind === "ConfidenceChanged" && room === "verdict") {
+    return "from_cause";
+  }
   return undefined;
 }
 
@@ -278,7 +378,26 @@ function demoCopy(
   content: string,
   payload: unknown,
 ): Pick<InvestigationStep, "line" | "subline" | "hero" | "pointer"> {
-  const raw = firstLine(content);
+  const earnedKinds = new Set([
+    "InvestigationOpened",
+    "EvidenceRequested",
+    "EvidenceReturned",
+    "SpecialistRecruited",
+    "TheoryProposed",
+    "TheorySupported",
+    "TheoryChallenged",
+    "TheoryRefined",
+    "TheoryWithdrawn",
+    "TheoryAccepted",
+    "ConfidenceChanged",
+    "RoomChallenge",
+    "VerdictIssued",
+    "ExplanationIssued",
+    "FixTargetIssued",
+  ]);
+  const raw = earnedKinds.has(kind)
+    ? extractEarnedNarrative(content, payload)
+    : firstLine(content);
 
   if (kind === "investigator_admission" && payload && typeof payload === "object") {
     const admission = String(
@@ -488,6 +607,51 @@ function demoCopy(
     };
   }
 
+  if (kind === "SpecialistRecruited" && payload && typeof payload === "object") {
+    const recruit = String((payload as { recruit?: string }).recruit ?? "specialist");
+    const recruitLabel = recruit.replace(/_/g, " ");
+    return {
+      line: raw || `Recruiting ${recruitLabel} into the investigation party.`,
+      subline: recruit,
+      hero: true,
+    };
+  }
+
+  if (kind === "ConfidenceChanged" && payload && typeof payload === "object") {
+    const p = payload as { confidence_before?: string; confidence_after?: string };
+    return {
+      line: clip(raw, 280),
+      subline: `${p.confidence_before ?? "—"} → ${p.confidence_after ?? "—"}`,
+      hero: true,
+    };
+  }
+
+  if (
+    kind === "TheoryProposed" ||
+    kind === "TheoryChallenged" ||
+    kind === "TheorySupported" ||
+    kind === "TheoryRefined" ||
+    kind === "TheoryWithdrawn" ||
+    kind === "TheoryAccepted" ||
+    kind === "RoomChallenge" ||
+    kind === "InvestigationOpened" ||
+    kind === "EvidenceRequested" ||
+    kind === "EvidenceReturned" ||
+    kind === "VerdictIssued" ||
+    kind === "ExplanationIssued" ||
+    kind === "FixTargetIssued"
+  ) {
+    const theory =
+      payload && typeof payload === "object" && "theory" in payload
+        ? String((payload as { theory?: string }).theory ?? "")
+        : "";
+    return {
+      line: clip(raw, 280),
+      subline: theory ? theory.replace(/_/g, " ") : undefined,
+      hero: true,
+    };
+  }
+
   if (kind === "NormalizerRouting" && payload && typeof payload === "object") {
     const p = payload as {
       artifact?: { packet_counts?: Record<string, number> };
@@ -545,6 +709,31 @@ const THEORY_ROLE_LABELS: Record<string, string> = {
   system_auditor: "System Auditor",
   skeptic: "Skeptic",
   reconciliation_judge: "Reconciliation Judge",
+  incident_room: "Incident Room",
+  normalizer: "Normalizer",
+  verdict_judge: "Verdict Judge",
+  explanation_judge: "Explanation Judge",
+  execution_investigator: "Execution Investigator",
+  communication_investigator: "Communication Investigator",
+  workflow_investigator: "Workflow Investigator",
+  policy_investigator: "Policy Investigator",
+};
+
+export function stepFromEarnedFeedEntry(input: {
+  agentId: string;
+  messageId: string;
+  bandEventKind?: string;
+  content?: string;
+  payload?: EarnedFeedPayload;
+  room: InvestigationRoom;
+}): Omit<InvestigationStep, "index"> | null {
+  return stepFromFeedEntry(input);
+}
+
+type EarnedFeedPayload = {
+  type?: string;
+  agent_role?: string;
+  [key: string]: unknown;
 };
 
 export function stepFromFeedEntry(input: {
@@ -633,6 +822,7 @@ function pushFeedRows(
 /** Rebuild curated demo steps from a saved investigation. */
 export function stepsFromInvestigationRun(run: {
   stepTimeline?: InvestigationStep[];
+  earnedInvestigation?: { feedTimeline?: Array<FeedRow & { room: InvestigationRoom }> };
   realityCollision?: { feedTimeline?: Array<FeedRow & { room: InvestigationRoom }> };
   causeRoom?: { feedTimeline?: FeedRow[] };
   localizationRoom?: {
@@ -642,6 +832,22 @@ export function stepsFromInvestigationRun(run: {
 }): InvestigationStep[] {
   if (run.stepTimeline?.length) {
     return filterDemoSteps(run.stepTimeline);
+  }
+
+  if (run.earnedInvestigation?.feedTimeline?.length) {
+    const merged: Omit<InvestigationStep, "index">[] = [];
+    for (const row of run.earnedInvestigation.feedTimeline) {
+      const step = stepFromFeedEntry({
+        room: row.room,
+        agentId: row.agentId,
+        messageId: row.messageId,
+        bandEventKind: row.bandEventKind,
+        content: row.content,
+        payload: row.payload,
+      });
+      if (step) merged.push(step);
+    }
+    return merged.map((step, index) => ({ ...step, index }));
   }
 
   if (run.realityCollision?.feedTimeline?.length) {

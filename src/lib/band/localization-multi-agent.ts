@@ -1,5 +1,8 @@
 import {
   BandAgentProfile,
+  getBandRoomHostApiKey,
+  isReusingBandRoom,
+  postAgentRoomUpdate,
   postEvent,
 } from "@/lib/band/client";
 import { LocalizationInvestigatorRole } from "@/lib/localization-room/types";
@@ -128,6 +131,35 @@ export async function postLocalizationRoomEvent(input: {
   metadata?: Record<string, unknown>;
 }) {
   const agent = input.agents[input.role];
+
+  let canPostAsAgent = true;
+  if (isReusingBandRoom()) {
+    const { ensureRoomParticipant } = await import("@/lib/band/multi-agent");
+    canPostAsAgent = await ensureRoomParticipant(
+      input.roomId,
+      agent.profile.id,
+      getBandRoomHostApiKey(agent.apiKey),
+    );
+  }
+
+  if (!canPostAsAgent && isReusingBandRoom()) {
+    const post = await postAgentRoomUpdate(
+      input.roomId,
+      `**${agent.displayName}** — ${input.content}`,
+      {
+        ...input.metadata,
+        agentRole: input.role,
+        displayName: agent.displayName,
+        orchestratorFallback: true,
+      },
+    );
+    return {
+      id: post.id,
+      content: input.content,
+      metadata: input.metadata,
+    };
+  }
+
   const raw = await postEvent(
     input.roomId,
     input.messageType,

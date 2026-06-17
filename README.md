@@ -10,13 +10,24 @@ Built for the **Band of Agents Hackathon** ([lablab.ai](https://lablab.ai)). Bor
 
 ## Screenshots
 
-| Operations desk | Live investigation | Completed audit report |
-|-----------------|-------------------|------------------------|
-| ![Dashboard](docs/screenshots/01-dashboard.png) | ![Live investigation](docs/screenshots/03-investigation-live.png) | ![Incident report](docs/screenshots/06-incident-report-complete.png) |
+| Desk | Timeline | Live investigation |
+|------|----------|-------------------|
+| ![Desk](docs/screenshots/01-dashboard.png) | ![Timeline](docs/screenshots/09-timeline.png) | ![Live](docs/screenshots/03-investigation-live.png) |
 
-**Guide:** [How it works](docs/screenshots/04-guide.png) · `/guide` in the app
+| Theory combat | Completed report | CRM |
+|---------------|------------------|-----|
+| ![Debate](docs/screenshots/04-investigation-debate.png) | ![Report](docs/screenshots/06-incident-report-complete.png) | ![CRM](docs/screenshots/08-crm.png) |
 
-> Regenerate live captures from a running dev server: `npm run capture-screenshots` (requires Playwright Chromium — see `npm run install:browsers`).
+**Also:** [Transcript](docs/screenshots/10-transcript.png) · [Themes](docs/screenshots/11-themes.png) · [Agents bay](docs/screenshots/12-agents-bay.png) · [Guide](docs/screenshots/05-guide.png)
+
+**Demo video:** `docs/screenshots/incident-room-demo.webm` (auto-walkthrough of `retell_call_clinic_44102`)
+
+> Regenerate from a running dev server:
+> ```bash
+> npm run install:browsers   # once
+> npm run dev
+> npm run capture-demo       # or: BASE_URL=http://localhost:3002 npm run capture-demo
+> ```
 
 ---
 
@@ -24,12 +35,12 @@ Built for the **Band of Agents Hackathon** ([lablab.ai](https://lablab.ai)). Bor
 
 | Layer | What happens |
 |-------|----------------|
-| **Evidence Router (Normalizer)** | Splits platform JSON into `transcript_packet`, `tool_trace_packet`, `definition_packet` — **no interpretation** |
-| **Cause Room** | Claim Tracer (transcript only) vs Backend Witness (tools only) → challenges → Causal Judge bridge finding |
-| **Architecture Room** | Control Flow / Policy / Guard investigators localize cause to workflow surfaces |
-| **Theory path** | Competing theories with visible withdrawal (Priya, opaque LEAP redelivery imports) |
-| **Completed report** | Audit memo: Incident finding, Customer impact, System reality, Cause/Architecture findings, Fix target |
-| **Live sync** | SSE stream of Band beats during investigation; report-first after complete |
+| **Earned investigation (hero demo)** | Incident Room recruits specialists into Band · Normalizer routes evidence · theory combat · **call outcome** + fix target |
+| **Investigation Bay UI** | Crew bar grows on recruit only · stage slots · theory strip + dialogue dock |
+| **Evidence Router (Normalizer)** | Splits platform JSON into packets — **no interpretation** |
+| **Cause / Architecture rooms** | Legacy multi-room pipeline (Klaus, Marta fixtures) |
+| **Completed report** | Audit memo + cited PDF (`CALL OUTCOME`, not binary trust label) |
+| **Fake CRM** | 13 seed customers · lookup from call evidence |
 
 ---
 
@@ -56,12 +67,15 @@ Open **http://localhost:3000**
 
 ### Demo incidents
 
-| ID | Path | What it shows |
-|----|------|----------------|
-| `SYN-2026-0615-priya` | Theory investigation | Competing theories → withdrawal → audit report |
-| `LEAP-2026-0614-7c9e2a1b` | Opaque LEAP import | Auto-routes to theory path from evidence shape |
-| `PMB-2024-0847` | Klaus | Full Cause + Architecture pipeline |
-| `REV-2026-001` | Marta | Cross-room revision cycle |
+| ID | What it shows |
+|----|----------------|
+| **`retell_call_clinic_44102`** | **Hero screen recording** — earned investigation · reschedule 503 · Maria Santos CRM |
+| `PMB-2024-0847` | Klaus — callback promised, API failed |
+| `SYN-2026-0615-priya` | Theory investigation · withdrawal arc |
+| `LEAP-2026-0614-7c9e2a1b` | Opaque LEAP import |
+| `REV-2026-001` | Marta — cross-room revision |
+
+**Recording script:** [docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md)
 
 Import JSON via **Desk → Import evidence JSON**, or use seeded fixtures in `fixtures/seeded/`.
 
@@ -113,7 +127,7 @@ incident-room/
 ├── src/lib/localization-room/ # Architecture Room
 ├── src/lib/reality/           # Theory investigation + incident report schema
 ├── src/lib/demo/              # Live theater UI + report views
-└── scripts/capture-screenshots.mjs
+└── scripts/capture-demo-media.mjs
 ```
 
 ---
@@ -130,7 +144,13 @@ Docs: [Band Agent API](https://docs.thenvoi.com/api/agent-api)
 
 ## Hackathon pitch (30 seconds)
 
-> Customer voice calls fail in ways transcripts hide. Incident Room splits evidence so blind agents must argue — conversation vs execution vs workflow — in real Band rooms. The output is an **audit memo**, not a chat summary: what the customer believed, what the system proved, which theories died, and where to fix.
+> Customer voice calls fail in ways transcripts hide. Incident Room **recruits blind specialists** into Band, routes evidence without interpretation, and **kills theories on the record**. Output is a **call outcome audit memo** — what the customer believed, what broke, what to fix — not "NOT JUSTIFIED."
+
+---
+
+## Screen demo
+
+See **[docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md)** for the full recording beat sheet (Desk → Theories → Band split → Reports → CRM).
 
 ---
 

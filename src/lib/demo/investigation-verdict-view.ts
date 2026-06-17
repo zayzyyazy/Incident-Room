@@ -3,6 +3,7 @@ import { VoiceIncidentEvidence } from "@/lib/evidence/types";
 import { buildTheoryScriptForEvidence } from "@/lib/reality/build-theory-script";
 import { IncidentReport, shouldUseTheoryInvestigation } from "@/lib/reality/types";
 import { InvestigationStep } from "@/lib/demo/investigation-steps";
+import { isLocalBandRoom } from "@/lib/band/client";
 
 export type IncidentReportView = {
   finding: string;
@@ -35,6 +36,9 @@ export function buildIncidentReportView(
   evidence: VoiceIncidentEvidence,
   run?: InvestigationRun | null,
 ): IncidentReportView {
+  const earned = run?.earnedInvestigation?.incidentReport;
+  if (earned) return mapReport(earned);
+
   const report = run?.realityCollision?.incidentReport;
   if (report) {
     return mapReport(report);
@@ -84,7 +88,18 @@ export function buildTheoryConflictView(
     "TheoryWithdrawal",
     "TheoryCounter",
     "TheorySynthesis",
+    "TheoryProposed",
+    "TheorySupported",
+    "TheoryRefined",
+    "TheoryAccepted",
     "IncidentFinding",
+    "SpecialistRecruited",
+    "EvidenceRequested",
+    "EvidenceReturned",
+    "RoomChallenge",
+    "ConfidenceChanged",
+    "VerdictIssued",
+    "ExplanationIssued",
   ]);
 
   const collaborationKinds = new Set([
@@ -108,9 +123,19 @@ export function buildTheoryConflictView(
       line: s.line,
       highlight:
         s.kind === "TheoryChallenge" ||
+        s.kind === "TheoryChallenged" ||
+        s.kind === "TheoryProposed" ||
+        s.kind === "TheorySupported" ||
+        s.kind === "TheoryRefined" ||
+        s.kind === "TheoryAccepted" ||
         s.kind === "TheoryCounter" ||
+        s.kind === "TheoryWithdrawn" ||
         s.kind === "TheoryWithdrawal" ||
         s.kind === "TheorySynthesis" ||
+        s.kind === "SpecialistRecruited" ||
+        s.kind === "RoomChallenge" ||
+        s.kind === "ConfidenceChanged" ||
+        s.kind === "VerdictIssued" ||
         s.kind === "agent_challenge" ||
         s.kind === "investigator_admission" ||
         s.kind === "surface_attack" ||
@@ -126,8 +151,8 @@ export function isTheoryInvestigationDemo(evidence: VoiceIncidentEvidence): bool
 }
 
 export function bandRoomUrl(roomId?: string): string | undefined {
-  if (!roomId) return undefined;
-  return `https://app.band.ai/agent/chats/${roomId}`;
+  if (!roomId || isLocalBandRoom(roomId)) return undefined;
+  return `https://app.band.ai/chat/${roomId}`;
 }
 
 /** @deprecated */

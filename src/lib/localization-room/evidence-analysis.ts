@@ -111,6 +111,10 @@ export function analyzeEvidenceForLocalization(
     droppedEarly ||
     (customerTurnCount === 0 && failedTools.length > 0 && !handoffSucceeded);
 
+  const healthyCall =
+    failedTools.length === 0 &&
+    !hints.some((h) => /premature|confirm|closure|success|ungrounded|handoff/i.test(h));
+
   const primaryFailureTool =
     errorTools[0] ??
     failedTools.find((c) => IDENTITY_TOOL_NAMES.has(c.name)) ??
@@ -122,7 +126,18 @@ export function analyzeEvidenceForLocalization(
   let mechanismStatement: string;
   let requiredGuardMissing: string;
 
-  if (insufficientForLocalization) {
+  if (healthyCall && customerTurnCount === 0) {
+    mechanismId = "healthy_call_no_customer_speech";
+    mechanismStatement =
+      "Captured trace shows successful tool execution and no customer utterance yet — no actionable incident signal.";
+    requiredGuardMissing = "none — awaiting customer interaction or failure evidence";
+  } else if (healthyCall && customerTurnCount > 0) {
+    mechanismId = "healthy_call_with_customer_speech";
+    mechanismStatement =
+      "Tools succeeded in the captured trace — investigate only if transcript promises contradict side effects.";
+    requiredGuardMissing =
+      "verify agent utterances against tool results before closing";
+  } else if (insufficientForLocalization) {
     mechanismId = "error_swallowed_without_customer_block";
     mechanismStatement =
       "Call ended before intent resolution — failure at identity lookup was not surfaced to the customer";
@@ -185,19 +200,25 @@ export function analyzeEvidenceForLocalization(
     ? `${failureName} → ${resultSummary(primaryFailureTool.result)}`
     : "tool trace incomplete";
 
-  const causePredicts = insufficientForLocalization
+  const causePredicts = healthyCall
+    ? "no failed execution step is established in the captured trace."
+    : insufficientForLocalization
     ? "the observed customer outcome is explained by a specific failed execution step."
     : identityCheckFailed
       ? "failed identity verification is necessary before the agent could honestly confirm handoff."
       : "failed or missing backend execution is necessary before the customer was misled.";
 
-  const implementationShows = insufficientForLocalization
+  const implementationShows = healthyCall
+    ? `${successTools.length} successful tool call(s); ${customerTurnCount} customer turn(s); call ${callStatus ?? "imported"}.`
+    : insufficientForLocalization
     ? `${failureDetail}; call ${callStatus ?? "ended"} with only ${customerTurnCount} customer turn(s).`
     : identityCheckFailed && handoffSucceeded
       ? `${failureDetail}; ${primaryHandoffTool?.name ?? "handoff tool"} still succeeded and agent used success language.`
       : `${failureDetail}; customer heard ${customerTurnCount} turn(s) while ${successTools.length} tool(s) succeeded.`;
 
-  const bwDefenseLine = insufficientForLocalization
+  const bwDefenseLine = healthyCall
+    ? `All ${successTools.length} captured tool call(s) succeeded · no failure in trace.`
+    : insufficientForLocalization
     ? `${failureDetail} · call ${callStatus ?? "incomplete"} · handoff not proven.`
     : `${failureDetail}${handoffSucceeded ? ` · ${primaryHandoffTool?.name ?? "handoff"} returned success` : ""}.`;
 

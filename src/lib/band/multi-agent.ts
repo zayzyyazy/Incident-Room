@@ -2,6 +2,10 @@ import {
   BandAgentProfile,
   BandMessageRecord,
   getAgentProfile,
+  getBandRoomHostApiKey,
+  isLocalBandRoom,
+  isReusingBandRoom,
+  postAgentRoomUpdate,
   postEvent,
 } from "@/lib/band/client";
 
@@ -96,6 +100,10 @@ export async function addParticipantToRoom(
   actingAgentApiKey: string,
   participantId: string,
 ): Promise<{ ok: boolean; status: number; body: unknown }> {
+  if (isLocalBandRoom(roomId)) {
+    return { ok: true, status: 200, body: { local: true } };
+  }
+
   const baseUrl = process.env.BAND_REST_URL ?? "https://app.band.ai/api/v1";
   const response = await fetch(`${baseUrl}/agent/chats/${roomId}/participants`, {
     method: "POST",
@@ -135,6 +143,24 @@ export async function addParticipantToRoom(
   // #endregion
 
   return { ok: response.ok, status: response.status, body };
+}
+
+/** Ensure a remote agent can post into a reused user-owned demo room. */
+export async function ensureRoomParticipant(
+  roomId: string,
+  participantId: string,
+  roomCreatorApiKey?: string,
+): Promise<boolean> {
+  if (isLocalBandRoom(roomId) || !isReusingBandRoom()) {
+    return true;
+  }
+
+  const hostKey = getBandRoomHostApiKey(roomCreatorApiKey);
+  const result = await addParticipantToRoom(roomId, hostKey, participantId);
+  if (result.ok || result.status === 409 || result.status === 422) {
+    return true;
+  }
+  return false;
 }
 
 export async function setupCauseRoomParticipants(
@@ -182,6 +208,39 @@ export async function postCauseRoomEvent(input: {
   metadata?: Record<string, unknown>;
 }): Promise<BandMessageRecord> {
   const agent = input.agents[input.role];
+  const canPostAsAgent = await ensureRoomParticipant(
+    input.roomId,
+    agent.profile.id,
+    agent.apiKey,
+  );
+
+  if (!canPostAsAgent && isReusingBandRoom()) {
+    try {
+      const label = agent.displayName ?? input.role.replace(/_/g, " ");
+      const post = await postAgentRoomUpdate(
+        input.roomId,
+        `**${label}** — ${input.content}`,
+        {
+          ...input.metadata,
+          agentRole: input.role,
+          displayName: label,
+          orchestratorFallback: true,
+        },
+      );
+      return {
+        id: post.id,
+        content: input.content,
+        metadata: input.metadata,
+      };
+    } catch (error) {
+      console.warn("Band orchestrator fallback failed:", error);
+      return {
+        id: crypto.randomUUID(),
+        content: input.content,
+        metadata: { ...input.metadata, bandError: true },
+      };
+    }
+  }
 
   try {
     const raw = await postEvent(

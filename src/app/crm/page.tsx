@@ -112,7 +112,19 @@ export default function CrmPage() {
   }
 
   return (
-    <AppShell title="Fake CRM" subtitle="Customer records for agent lookup">
+    <AppShell title="Fake CRM" subtitle="13 demo customers · tied to incident fixtures">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={async () => {
+            await fetch("/api/crm/reseed", { method: "POST" });
+            await load();
+          }}
+          className="rounded-lg border border-room-border bg-room-elevated px-3 py-1.5 text-xs text-room-muted hover:text-trace"
+        >
+          Reload seed customers
+        </button>
+      </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
         <Panel title={editingId ? "Edit customer" : "Add customer"}>
           <form onSubmit={handleSubmit} className="space-y-3 p-4">

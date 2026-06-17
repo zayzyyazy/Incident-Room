@@ -6,6 +6,13 @@ import {
 import { routeEvidence } from "@/lib/normalizer/route-evidence";
 import { LeapingAgentSlice } from "@/lib/localization-room/load-artifact";
 
+export { normalizeImportedEvidence, normalizeImportedJson } from "@/lib/normalizer/import-evidence";
+export type {
+  ImportNormalizeReport,
+  ImportNormalizeResult,
+  ImportPlatform,
+} from "@/lib/normalizer/import-evidence";
+
 export function normalizeIncidentEvidence(input: {
   evidence: VoiceIncidentEvidence;
   definitionArtifact?: LeapingAgentSlice | null;

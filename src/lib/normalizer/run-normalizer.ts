@@ -1,4 +1,8 @@
-import { createRoom } from "@/lib/band/client";
+import {
+  createRoom,
+  getBandRoomHostApiKey,
+  isReusingBandRoom,
+} from "@/lib/band/client";
 import {
   postCauseRoomEvent,
   resolveCauseRoomAgents,
@@ -57,7 +61,13 @@ export async function runEvidenceNormalizer(input: {
     title: `Evidence routing · ${input.evidence.incident_id}`,
     apiKey: agents.causal_judge.apiKey,
   });
-  await setupCauseRoomParticipants(room.id, agents.causal_judge.apiKey, agents);
+  if (!isReusingBandRoom()) {
+    await setupCauseRoomParticipants(
+      room.id,
+      getBandRoomHostApiKey(agents.causal_judge.apiKey),
+      agents,
+    );
+  }
 
   const post = await postCauseRoomEvent({
     roomId: room.id,
