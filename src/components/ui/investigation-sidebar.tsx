@@ -39,7 +39,7 @@ export function InvestigationSidebar({
   onSelect: (section: InvestigationSection) => void;
 }) {
   return (
-    <aside className="hidden w-52 shrink-0 border-r border-room-border bg-[#11141a] lg:flex lg:flex-col">
+    <aside className="flex w-52 shrink-0 flex-col border-r border-room-border bg-[#11141a]">
       <div className="border-b border-room-border px-4 py-4">
         <Link href={`/incidents/${incidentId}`} className="text-sm font-semibold text-trace">
           Incident Room
@@ -52,6 +52,7 @@ export function InvestigationSidebar({
             <button
               key={item.id}
               type="button"
+              data-testid={`investigation-nav-${item.id}`}
               onClick={() => onSelect(item.id)}
               className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
                 isActive

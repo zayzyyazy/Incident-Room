@@ -366,6 +366,7 @@ export function LiveInvestigationTheater({
           <button
             type="button"
             onClick={start}
+            data-testid="investigation-run"
             className="rounded-lg border border-signal/50 bg-signal/15 px-5 py-2.5 text-sm font-semibold text-signal transition hover:bg-signal/25"
           >
             Run investigation
@@ -391,6 +392,7 @@ export function LiveInvestigationTheater({
             <button
               type="button"
               onClick={start}
+              data-testid="investigation-run-again"
               className="rounded-lg border border-signal/50 bg-signal/15 px-4 py-2 text-xs font-semibold text-signal hover:bg-signal/25"
             >
               Run again
