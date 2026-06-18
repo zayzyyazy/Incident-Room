@@ -386,7 +386,16 @@ export function LiveInvestigationTheater({
 
       {complete && !live ? (
         <div className="rounded-xl border border-trace/40 bg-trace/[0.08] px-4 py-3 text-sm text-room-muted">
-          <p className="font-semibold text-trace">Done — open Reports for the audit memo.</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="font-semibold text-trace">Done — open Reports for the audit memo.</p>
+            <button
+              type="button"
+              onClick={start}
+              className="rounded-lg border border-signal/50 bg-signal/15 px-4 py-2 text-xs font-semibold text-signal hover:bg-signal/25"
+            >
+              Run again
+            </button>
+          </div>
           {onGoToReports ? (
             <button
               type="button"

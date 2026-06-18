@@ -53,12 +53,31 @@ async function pause(page, ms) {
 
 async function openSection(page, label) {
   const link = page
-    .getByRole("button", { name: label })
-    .or(page.getByRole("link", { name: label }));
-  if (await link.first().isVisible().catch(() => false)) {
-    await link.first().click();
-    await pause(page, 900);
+    .getByRole("button", { name: label, exact: true })
+    .or(page.getByRole("link", { name: label, exact: true }));
+  await link.first().click({ timeout: 8000 }).catch(() => {});
+  await pause(page, 900);
+}
+
+async function clickStartInvestigation(page) {
+  const runBtn = page.getByRole("button", { name: /^Run investigation$/i });
+  const againBtn = page.getByRole("button", { name: /^Run again$/i });
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await runBtn.isVisible().catch(() => false)) {
+      await runBtn.click();
+      return;
+    }
+    if (await againBtn.isVisible().catch(() => false)) {
+      await againBtn.click();
+      return;
+    }
+    await pause(page, 1500);
   }
+
+  throw new Error(
+    "Could not find Run investigation or Run again on Theories tab. Open the incident in browser and confirm the theories panel loaded.",
+  );
 }
 
 async function waitForInvestigationComplete(page, timeoutMs = 150_000) {
@@ -87,15 +106,19 @@ async function recordFullDemo() {
     recordVideo: { dir: VIDEO_DIR, size: { width: 1440, height: 900 } },
   });
   const page = await context.newPage();
+  let ok = false;
+  let failure = null;
 
   try {
     await page.goto(BASE, { waitUntil: "networkidle", timeout: 90_000 });
     await pause(page, 2500);
 
-    await page.getByRole("link", { name: new RegExp(INCIDENT.slice(0, 20)) }).first().click().catch(async () => {
-      await page.goto(`${BASE}/incidents/${INCIDENT}`, { waitUntil: "networkidle", timeout: 90_000 });
+    await page.goto(`${BASE}/incidents/${INCIDENT}`, {
+      waitUntil: "networkidle",
+      timeout: 90_000,
     });
-    await pause(page, 2000);
+    await page.waitForSelector("text=Theories", { timeout: 30_000 });
+    await pause(page, 1500);
 
     await openSection(page, "Timeline");
     await pause(page, 3500);
@@ -109,11 +132,7 @@ async function recordFullDemo() {
     await openSection(page, "Theories");
     await pause(page, 2000);
 
-    const runBtn = page.getByRole("button", { name: /Run investigation/i });
-    if (!(await runBtn.isVisible().catch(() => false))) {
-      throw new Error("Run investigation button not found on Theories tab.");
-    }
-    await runBtn.click();
+    await clickStartInvestigation(page);
     console.log("  Investigation started — waiting for completion…");
 
     const done = await waitForInvestigationComplete(page);
@@ -131,6 +150,9 @@ async function recordFullDemo() {
 
     await page.goto(`${BASE}/`, { waitUntil: "networkidle", timeout: 60_000 });
     await pause(page, 2000);
+    ok = true;
+  } catch (err) {
+    failure = err instanceof Error ? err : new Error(String(err));
   } finally {
     const video = page.video();
     await page.close();
@@ -144,6 +166,11 @@ async function recordFullDemo() {
       console.log(`Video saved: ${DEST} (${(stat.size / 1024 / 1024).toFixed(1)} MiB)`);
     }
     fs.rmSync(VIDEO_DIR, { recursive: true, force: true });
+  }
+
+  if (failure) {
+    console.error(failure.message);
+    process.exit(1);
   }
 }
 
