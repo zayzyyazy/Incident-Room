@@ -28,6 +28,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Timeline (newest first)
 
+### Thu 18 Jun 2026 — 16:11 — Production runtime hardening
+
+**What happened:** Removed local runtime dependencies from the production branch.
+**Problem (if any):** Serverless deploys cannot rely on `.data` writes, localhost debug ingest calls, or Band being available for every request.
+**Fix / result:** Imported/runtime incidents and CRM edits use Mongo when configured, Band room creation falls back to local rooms on API/env failures, localhost debug calls were removed, and lint/build pass.
+
+---
+
 ### Thu 18 Jun 2026 — 13:50 — Mixed-language order requests fixed
 
 **What happened:** ReplyChat now recognizes rough German/English order requests like "stelle eine order bitteeee".

@@ -180,28 +180,6 @@ export async function runCauseRoomInvestigation(
 
   await setupCauseRoomParticipants(room.id, roomCreatorKey, agents);
 
-  // #region agent log
-  fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "aca1d4",
-    },
-    body: JSON.stringify({
-      sessionId: "aca1d4",
-      hypothesisId: "C",
-      location: "run-cause-room-investigation.ts:setup",
-      message: "room ready",
-      data: {
-        roomId: room.id.slice(0, 8),
-        distinctBandAgents,
-        roomCreatorKeyPrefix: roomCreatorKey.slice(0, 12),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   let thread: BandPostContext[] = [];
   const allMessageIds: string[] = [];
   const feedTimeline: CauseRoomFeedEntry[] = [];

@@ -367,32 +367,6 @@ export function assessImportedEvidence(
   if (promiseWithoutMutation) signals.push("promise_without_mutation_tool");
   if (intent) signals.push(`intent:${intent}`);
 
-  // #region agent log
-  fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "aca1d4",
-    },
-    body: JSON.stringify({
-      sessionId: "aca1d4",
-      hypothesisId: "F-G",
-      location: "leaping-import.ts:assessImportedEvidence",
-      message: "import assessment signals",
-      data: {
-        incidentId: evidence.incident_id.slice(0, 12),
-        failedTools: failed.length,
-        customerTurns,
-        effectiveCustomerTurns,
-        toolCount: evidence.layer2_execution.function_calls.length,
-        signals,
-        promiseWithoutMutation,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   if (promiseWithoutMutation) {
     return {
       outcome: "clear_incident",

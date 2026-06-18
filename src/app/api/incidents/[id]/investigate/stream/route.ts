@@ -8,6 +8,7 @@ import {
 } from "@/lib/incidents/store";
 import { getIncidentForRequest } from "@/lib/incidents/resolve";
 import { persistFailureIncidentRecordIfNeeded } from "@/lib/incidents/failures";
+import { persistImportedIncidentRecordIfNeeded } from "@/lib/incidents/imported";
 import { runEarnedInvestigation } from "@/lib/orchestrator/run-earned-investigation";
 import { runNoActionableReview, shouldSkipFullInvestigation } from "@/lib/orchestrator/run-no-actionable-review";
 import {
@@ -63,7 +64,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
             crmLink: crm.link,
             crmLookup: crm.lookup,
           });
-          await persistFailureIncidentRecordIfNeeded(getIncident(params.id));
+          const latestRecord = getIncident(params.id);
+          await persistFailureIncidentRecordIfNeeded(latestRecord);
+          await persistImportedIncidentRecordIfNeeded(latestRecord);
 
           send({ type: "complete", run: completed, demoPath: "no_actionable" });
           return;
@@ -115,7 +118,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
             distinctBandAgents: earned.distinctBandAgents,
           },
         });
-        await persistFailureIncidentRecordIfNeeded(getIncident(params.id));
+        const latestRecord = getIncident(params.id);
+        await persistFailureIncidentRecordIfNeeded(latestRecord);
+        await persistImportedIncidentRecordIfNeeded(latestRecord);
 
         send({
           type: "complete",
@@ -129,7 +134,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
         const message =
           error instanceof Error ? error.message : "Investigation failed";
         const failed = failInvestigation(params.id, run.id, message);
-        await persistFailureIncidentRecordIfNeeded(getIncident(params.id));
+        const latestRecord = getIncident(params.id);
+        await persistFailureIncidentRecordIfNeeded(latestRecord);
+        await persistImportedIncidentRecordIfNeeded(latestRecord);
         send({ type: "error", error: message, run: failed });
       } finally {
         controller.close();

@@ -5,43 +5,30 @@ import {
   CrmCustomerSchema,
   CrmDatabaseSchema,
 } from "@/lib/crm/types";
+import { getMongoDb } from "@/lib/mongodb";
+import { CRM_COLLECTION, isMongoConfigured } from "@/lib/mongodb/config";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const CRM_PATH = path.join(DATA_DIR, "crm-customers.json");
 const SEED_PATH = path.join(process.cwd(), "fixtures", "crm", "customers.json");
+let localCustomers: CrmCustomer[] | null = null;
 
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+function readSeedDb() {
+  if (!fs.existsSync(SEED_PATH)) {
+    return { customers: [] };
   }
-
-  if (!fs.existsSync(CRM_PATH)) {
-    if (fs.existsSync(SEED_PATH)) {
-      const seed = fs.readFileSync(SEED_PATH, "utf8");
-      fs.writeFileSync(CRM_PATH, seed, "utf8");
-    } else {
-      fs.writeFileSync(
-        CRM_PATH,
-        JSON.stringify({ customers: [] }, null, 2),
-        "utf8",
-      );
-    }
-  }
-}
-
-function readDb() {
-  ensureDataFile();
-  const raw = fs.readFileSync(CRM_PATH, "utf8");
+  const raw = fs.readFileSync(SEED_PATH, "utf8");
   return CrmDatabaseSchema.parse(JSON.parse(raw));
 }
 
+function readDb() {
+  if (!localCustomers) {
+    localCustomers = readSeedDb().customers;
+  }
+
+  return { customers: localCustomers };
+}
+
 function writeDb(customers: CrmCustomer[]) {
-  ensureDataFile();
-  fs.writeFileSync(
-    CRM_PATH,
-    JSON.stringify({ customers }, null, 2),
-    "utf8",
-  );
+  localCustomers = customers;
 }
 
 export function listCrmCustomers(): CrmCustomer[] {
@@ -90,11 +77,82 @@ export function generateCustomerId(name: string): string {
 
 /** Replace runtime CRM DB with fixture seed (demo reset). */
 export function reseedCrmFromFixture(): CrmCustomer[] {
-  ensureDataFile();
-  if (!fs.existsSync(SEED_PATH)) {
-    throw new Error("Seed file missing: fixtures/crm/customers.json");
-  }
-  const seed = fs.readFileSync(SEED_PATH, "utf8");
-  fs.writeFileSync(CRM_PATH, seed, "utf8");
+  localCustomers = readSeedDb().customers;
   return readDb().customers;
+}
+
+async function crmCollection() {
+  const db = await getMongoDb();
+  return db.collection<CrmCustomer>(CRM_COLLECTION);
+}
+
+export async function listCrmCustomersForRuntime(): Promise<CrmCustomer[]> {
+  if (!isMongoConfigured()) {
+    return listCrmCustomers();
+  }
+
+  const collection = await crmCollection();
+  const existing = await collection.find({}).sort({ name: 1 }).toArray();
+  if (existing.length > 0) {
+    return existing.map((customer) => CrmCustomerSchema.parse(customer));
+  }
+
+  const seeded = readSeedDb().customers;
+  if (seeded.length > 0) {
+    await collection.insertMany(seeded);
+  }
+  return seeded;
+}
+
+export async function getCrmCustomerForRuntime(
+  customerId: string,
+): Promise<CrmCustomer | undefined> {
+  if (!isMongoConfigured()) {
+    return getCrmCustomer(customerId);
+  }
+
+  const collection = await crmCollection();
+  const customer = await collection.findOne({ customer_id: customerId });
+  return customer ? CrmCustomerSchema.parse(customer) : undefined;
+}
+
+export async function upsertCrmCustomerForRuntime(
+  input: unknown,
+): Promise<CrmCustomer> {
+  const customer = CrmCustomerSchema.parse(input);
+  if (!isMongoConfigured()) {
+    return upsertCrmCustomer(customer);
+  }
+
+  const collection = await crmCollection();
+  await collection.updateOne(
+    { customer_id: customer.customer_id },
+    { $set: customer },
+    { upsert: true },
+  );
+  return customer;
+}
+
+export async function deleteCrmCustomerForRuntime(customerId: string): Promise<boolean> {
+  if (!isMongoConfigured()) {
+    return deleteCrmCustomer(customerId);
+  }
+
+  const collection = await crmCollection();
+  const result = await collection.deleteOne({ customer_id: customerId });
+  return result.deletedCount > 0;
+}
+
+export async function reseedCrmFromFixtureForRuntime(): Promise<CrmCustomer[]> {
+  const seeded = readSeedDb().customers;
+  if (!isMongoConfigured()) {
+    return reseedCrmFromFixture();
+  }
+
+  const collection = await crmCollection();
+  await collection.deleteMany({});
+  if (seeded.length > 0) {
+    await collection.insertMany(seeded);
+  }
+  return seeded;
 }
