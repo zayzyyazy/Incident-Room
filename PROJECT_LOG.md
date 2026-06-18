@@ -28,6 +28,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Timeline (newest first)
 
+### Thu 18 Jun 2026 — 13:50 — Mixed-language order requests fixed
+
+**What happened:** ReplyChat now recognizes rough German/English order requests like "stelle eine order bitteeee".
+**Problem (if any):** Those messages could miss `place_order` classification or fail while persisting the incident, causing a generic workflow-error reply instead of the intended fake order confirmation.
+**Fix / result:** Broadened order intent detection, made failure persistence non-fatal, aligned chat history DB selection, and verified the fake placed-order reply plus failed tool trace still work without Band.
+
+---
+
 ### Thu 18 Jun 2026 — 13:34 — ReplyChat no longer blanks on order requests
 
 **What happened:** Restored safe fallback payloads for ReplyChat while keeping Band room handoffs as the first path.

@@ -26,7 +26,13 @@ function classifyIntentFromText(text: string) {
   if (/\b(refund|money back|return|chargeback|cancel order)\b/.test(lowered)) {
     return "refund";
   }
-  if (/\b(place|create|make|start|buy|purchase|checkout)\b.*\border\b|\border\b.*\b(place|create|make|start|buy|purchase|checkout)\b/.test(lowered)) {
+  const orderNoun = /\b(order|bestellung)\b/;
+  const placeOrderVerb =
+    /\b(place|create|make|start|buy|purchase|checkout|stelle|stellen|bestell|bestelle|bestellen|aufgeben)\b/;
+  if (
+    (placeOrderVerb.test(lowered) && orderNoun.test(lowered)) ||
+    /\bbestell\w*\b/.test(lowered)
+  ) {
     return "place_order";
   }
   if (/\b(status|tracking|track|delivery|delivered|where is|eta|shipped)\b/.test(lowered)) {

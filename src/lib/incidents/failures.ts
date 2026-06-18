@@ -51,10 +51,30 @@ function safeFailureRecordFromDocument(
 }
 
 export function isFailedChatEvidence(evidence: VoiceIncidentEvidence) {
+  const hasFailedTool = evidence.layer2_execution.function_calls.some(
+    (call) =>
+      call.status === "error" &&
+      (call.name === "placeOrder" ||
+        JSON.stringify(call.result ?? {}).toLowerCase().includes("sideeffectcreated")),
+  );
+  const analyzer = evidence.layer3_customer?.analyzer;
+  const analyzerSignals =
+    analyzer &&
+    typeof analyzer === "object" &&
+    Array.isArray((analyzer as { signals?: unknown }).signals)
+      ? ((analyzer as { signals: unknown[] }).signals as unknown[])
+      : [];
+  const hasFailureSignal = analyzerSignals.some(
+    (signal) =>
+      typeof signal === "string" &&
+      (signal === "place_order_noop" || signal.startsWith("tool_error")),
+  );
+
   return (
     evidence.incident_id.startsWith("CHAT-") &&
-    evidence.source_platform === "synthetic" &&
-    evidence.title.toLowerCase().startsWith("failed chat")
+    (evidence.title.toLowerCase().startsWith("failed chat") ||
+      hasFailedTool ||
+      hasFailureSignal)
   );
 }
 
@@ -75,29 +95,34 @@ export async function persistFailedChatEvidence(
     return null;
   }
 
-  const parsed = VoiceIncidentEvidenceSchema.parse(evidence);
-  const collection = await failuresCollection();
-  const timestamp = nowIso();
+  try {
+    const parsed = VoiceIncidentEvidenceSchema.parse(evidence);
+    const collection = await failuresCollection();
+    const timestamp = nowIso();
 
-  await collection.updateOne(
-    { incidentId: parsed.incident_id },
-    {
-      $set: {
-        incidentId: parsed.incident_id,
-        evidence: parsed,
-        status: "pending",
-        updatedAt: timestamp,
-        source: "replychat_failure",
+    await collection.updateOne(
+      { incidentId: parsed.incident_id },
+      {
+        $set: {
+          incidentId: parsed.incident_id,
+          evidence: parsed,
+          status: "pending",
+          updatedAt: timestamp,
+          source: "replychat_failure",
+        },
+        $setOnInsert: {
+          createdAt: timestamp,
+          investigations: [],
+        },
       },
-      $setOnInsert: {
-        createdAt: timestamp,
-        investigations: [],
-      },
-    },
-    { upsert: true },
-  );
+      { upsert: true },
+    );
 
-  return `mongodb://${FAILURES_COLLECTION}/${parsed.incident_id}`;
+    return `mongodb://${FAILURES_COLLECTION}/${parsed.incident_id}`;
+  } catch (error) {
+    console.error("Failed to persist failed chat evidence", error);
+    return null;
+  }
 }
 
 export async function persistFailureIncidentRecordIfNeeded(
@@ -107,25 +132,29 @@ export async function persistFailureIncidentRecordIfNeeded(
     return;
   }
 
-  const collection = await failuresCollection();
-  await collection.updateOne(
-    { incidentId: record.id },
-    {
-      $set: {
-        incidentId: record.id,
-        evidence: record.evidence,
-        status: record.status,
-        updatedAt: record.updatedAt,
-        lastRoomId: record.lastRoomId,
-        investigations: record.investigations,
-        source: "replychat_failure",
+  try {
+    const collection = await failuresCollection();
+    await collection.updateOne(
+      { incidentId: record.id },
+      {
+        $set: {
+          incidentId: record.id,
+          evidence: record.evidence,
+          status: record.status,
+          updatedAt: record.updatedAt,
+          lastRoomId: record.lastRoomId,
+          investigations: record.investigations,
+          source: "replychat_failure",
+        },
+        $setOnInsert: {
+          createdAt: record.createdAt,
+        },
       },
-      $setOnInsert: {
-        createdAt: record.createdAt,
-      },
-    },
-    { upsert: true },
-  );
+      { upsert: true },
+    );
+  } catch (error) {
+    console.error("Failed to persist failed chat incident record", error);
+  }
 }
 
 export async function listFailureIncidents(): Promise<IncidentRecord[]> {

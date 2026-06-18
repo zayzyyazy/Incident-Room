@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import getMongoClient from "@/lib/mongodb";
+import { getMongoDbName } from "@/lib/mongodb/config";
 
 export const dynamic = "force-dynamic";
 const SINGLE_USER_ID = "user-123";
@@ -17,7 +18,7 @@ type ChatDocument = {
 };
 
 function chatDbName() {
-  return process.env.MONGO_DB || "bands_hackathondb";
+  return getMongoDbName();
 }
 
 function titleFromMessage(message?: ChatDocument) {
