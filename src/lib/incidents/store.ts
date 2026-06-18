@@ -197,6 +197,16 @@ function isImportedIncident(
   return Boolean(layer && typeof layer === "object");
 }
 
+function isFailedChatIncident(
+  evidence: ReturnType<typeof VoiceIncidentEvidenceSchema.parse>,
+): boolean {
+  return (
+    evidence.incident_id.startsWith("CHAT-") &&
+    evidence.source_platform === "synthetic" &&
+    evidence.title.toLowerCase().startsWith("failed chat")
+  );
+}
+
 export function listIncidents(): IncidentSummary[] {
   seedIfEmpty();
   mergeMissingIncidentsFromDisk();
@@ -206,7 +216,8 @@ export function listIncidents(): IncidentSummary[] {
     .filter(
       (incident) =>
         isDemoSubmissionIncident(incident.id) ||
-        isImportedIncident(incident.evidence),
+        isImportedIncident(incident.evidence) ||
+        isFailedChatIncident(incident.evidence),
     )
     .map((incident) => {
       const last = incident.investigations.at(-1);

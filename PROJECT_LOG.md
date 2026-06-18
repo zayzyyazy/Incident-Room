@@ -8,7 +8,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (Thu 18 Jun 2026):** **Main branch build fixed + demo-ready** — conflict-resolution cleanup is done, lint/build pass, and captured demo assets remain in `docs/screenshots/`. Hero: `retell_call_clinic_44102`. Reply chat + Mongo chat sidebar still on `main`.
+**Status (Thu 18 Jun 2026):** **Main branch build fixed + demo-ready** — conflict-resolution cleanup is done, lint/build pass, failed ReplyChat JSON incidents show on the dashboard, and captured demo assets remain in `docs/screenshots/`. Hero: `retell_call_clinic_44102`.
 
 **Recording:** [docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md) (manual screen record) · automated assets via `npm run capture-demo`
 
@@ -27,6 +27,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Thu 18 Jun 2026 — 09:23 — Failed chats show on dashboard
+
+**What happened:** Failed ReplyChat JSON files now appear in the incident list.
+**Problem (if any):** The app already wrote `failed-chat-*.json`, but the dashboard filter hid those records unless they were demo submissions or imports.
+**Fix / result:** Added a failed-chat incident detector so root failed-chat evidence loads into the dashboard and can be opened for investigation.
+
+---
 
 ### Thu 18 Jun 2026 — 08:58 — Main branch build fixed
 
