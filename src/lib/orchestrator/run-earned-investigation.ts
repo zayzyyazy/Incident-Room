@@ -1,4 +1,4 @@
-import { createRoom, isLocalBandRoom, isReusingBandRoom } from "@/lib/band/client";
+import { createRoom, isReusingBandRoom } from "@/lib/band/client";
 import {
   agentsAreDistinct,
   resolveCauseRoomAgents,

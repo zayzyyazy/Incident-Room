@@ -71,7 +71,7 @@ async function bandFetch<T>(
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
-      ...fetchInit.headers,
+      ...init?.headers,
     },
   });
 
@@ -284,9 +284,8 @@ export async function createRoom(options?: {
   try {
     const raw = await bandFetch<unknown>("/agent/chats", {
       method: "POST",
-      apiKey: options?.apiKey,
       body: JSON.stringify({ chat }),
-    });
+    }, options?.apiKey);
 
     const room = requireId(
       "createRoom",
@@ -382,7 +381,6 @@ export async function postChatMessageAsAgent(
     return localBandMessage(content, options?.metadata);
   }
 
-  const { apiKey, baseUrl } = getConfig(options?.apiKey);
   const mentions = options?.mentions ?? [];
 
   const body: Record<string, unknown> = {
@@ -396,10 +394,9 @@ export async function postChatMessageAsAgent(
     `/agent/chats/${roomId}/messages`,
     {
       method: "POST",
-      apiKey,
-      baseUrl,
       body: JSON.stringify(body),
     },
+    options?.apiKey,
   );
 
   const message = requireId(
@@ -527,12 +524,8 @@ export async function postEvent(
     };
   }
 
-  const { apiKey, baseUrl } = getConfig(apiKeyOverride);
-
   return bandFetch(`/agent/chats/${roomId}/events`, {
     method: "POST",
-    apiKey,
-    baseUrl,
     body: JSON.stringify({
       event: {
         message_type: eventType,

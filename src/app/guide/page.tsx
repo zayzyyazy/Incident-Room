@@ -39,7 +39,7 @@ export default function GuidePage() {
       subtitle="Voice CS incident investigation model"
       variant="desk"
     >
-      <Panel title="Investigation flow" glow="trace" className="mb-6">
+      <Panel title="Investigation flow" className="mb-6">
         <div className="grid gap-0 divide-y divide-room-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           {FLOW_STEPS.map((step) => (
             <div key={step.n} className="p-5">

@@ -239,6 +239,7 @@ async function runAutomaticInvestigation(
     };
 
     const completed = completeInvestigation(incidentId, run.id, {
+      pipeline: "legacy",
       roomId: result.roomId,
       bandMessageIds: result.bandMessageIds,
       conversationAnalysis: result.conversationAnalysis,

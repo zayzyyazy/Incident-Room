@@ -255,7 +255,6 @@ function CrewmateFront({
 
 export function GameCharacterSprite({
   slotId,
-  slot,
   speaking,
   idle,
   ghost,

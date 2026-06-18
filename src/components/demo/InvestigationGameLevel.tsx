@@ -307,7 +307,7 @@ function TheoryStrip({
   for (const stance of focus.stances) {
     latestByAgent.set(stance.slotId, stance);
   }
-  const voters = [...latestByAgent.values()];
+  const voters = Array.from(latestByAgent.values());
 
   return (
     <div className="game-theory-strip border-b border-room-border/50 bg-room-bg/80 px-3 py-2">
@@ -491,7 +491,7 @@ export function InvestigationGameLevel({
       setRecruitRevealed((prev) => new Set(prev).add(slot));
     }, 820);
     return () => window.clearTimeout(t);
-  }, [activeStep?.id]);
+  }, [activeStep]);
 
   useEffect(() => {
     if (!activeStep || !isRecruitBeat(activeStep)) return;

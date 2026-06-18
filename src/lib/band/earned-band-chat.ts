@@ -102,7 +102,10 @@ function buildMentionsForBeat(
     const candidates = [
       quietTargets?.backendWitnessId,
       quietTargets?.claimTracerId,
-    ].filter((id): id is string => Boolean(id) && id !== posterId && !blocked.has(id));
+    ].filter(
+      (id): id is string =>
+        typeof id === "string" && id !== posterId && !blocked.has(id),
+    );
 
     const targetId = candidates[0];
     if (targetId) {
@@ -134,7 +137,7 @@ function buildMentionsForBeat(
     addLegacy(ids.verdictJudge, handles.verdictJudge, "Verdictjudge");
   }
 
-  if (mentions.length === 0 && beat.kind !== "EvidenceRequested" && beat.kind !== "EvidenceReturned") {
+  if (mentions.length === 0) {
     addLegacy(ids.normalizer, handles.normalizer, "Normaliezer");
   }
 

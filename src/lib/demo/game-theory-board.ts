@@ -129,7 +129,7 @@ export function deriveTheoryBoard(
     if (fromStep) focusTheoryId = fromStep;
   }
 
-  const theories = [...byId.values()].filter((t) => t.stances.length > 0);
+  const theories = Array.from(byId.values()).filter((t) => t.stances.length > 0);
   return { theories, focusTheoryId, focusStep };
 }
 

@@ -10,7 +10,6 @@ import {
   buildFixRecommendation,
   computeVerdict,
   customerAckTurn,
-  customerBeliefNarrative,
   customerIntentTurn,
   formatToolFailure,
   listFailedTools,
@@ -144,8 +143,6 @@ function buildContestedScript(
   const ack = agentTurn ? customerAckTurn(evidence, agentTurn.turn_id) : undefined;
   const surface = resolveFixSurface(evidence.incident_id, failedToolName);
   const surviving = survivingTheoryId(evidence);
-  const belief = customerBeliefNarrative(evidence);
-  const { fix_target, fix_detail } = buildFixRecommendation(evidence, primary);
 
   const successTool = evidence.layer2_execution.function_calls.find(
     (c) => c.status === "success",

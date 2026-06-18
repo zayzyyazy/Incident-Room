@@ -62,7 +62,7 @@ export function InvestigationSectionPanels({
       });
     }
 
-    for (const [i, call] of evidence.layer2_execution.function_calls.entries()) {
+    evidence.layer2_execution.function_calls.forEach((call, i) => {
       events.push({
         id: `tool-${i}`,
         label: `Tool · ${call.name}`,
@@ -72,7 +72,7 @@ export function InvestigationSectionPanels({
             : call.status ?? "called",
         tone: call.status === "success" ? "text-trace" : "text-alert",
       });
-    }
+    });
 
     const side = evidence.layer2_execution.side_effects;
     events.push({

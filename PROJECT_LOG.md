@@ -8,7 +8,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (Tue 17 Jun 2026):** **Demo-ready + media captured** — 12 README screenshots + `incident-room-demo.webm` in `docs/screenshots/`. Hero: `retell_call_clinic_44102`. Reply chat + Mongo chat sidebar still on `main`.
+**Status (Thu 18 Jun 2026):** **Main branch build fixed + demo-ready** — conflict-resolution cleanup is done, lint/build pass, and captured demo assets remain in `docs/screenshots/`. Hero: `retell_call_clinic_44102`. Reply chat + Mongo chat sidebar still on `main`.
 
 **Recording:** [docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md) (manual screen record) · automated assets via `npm run capture-demo`
 
@@ -27,6 +27,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Thu 18 Jun 2026 — 08:58 — Main branch build fixed
+
+**What happened:** Cleaned up broken conflict-resolution leftovers on main.
+**Problem (if any):** Build/lint failed because of stale helper signatures, unused merge leftovers, missing `pdf-lib`, and a few TypeScript target/type mismatches.
+**Fix / result:** Restored the current Band client call shape, removed unused bindings, added the existing PDF dependency, fixed iterator compatibility, and verified lint/build pass.
+
+---
 
 ### Tue 17 Jun 2026 — README media + capture pipeline
 

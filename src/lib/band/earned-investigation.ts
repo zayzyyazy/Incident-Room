@@ -10,7 +10,6 @@ import {
 } from "@/lib/band/client";
 import {
   isNarratorBeat,
-  formatEarnedBeatChatContent,
   postEarnedBeatToVisibleChat,
 } from "@/lib/band/earned-band-chat";
 import {
