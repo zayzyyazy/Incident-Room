@@ -1,0 +1,566 @@
+{
+  "incident_id": "CHAT-chat_1781773527635_e3fj8t",
+  "source_platform": "synthetic",
+  "title": "Failed chat chat_1781773527635_e3fj8t: place_order",
+  "call_metadata": {
+    "duration_sec": 80,
+    "status": "chat_completed",
+    "agent_id": "replychat-band-workflow"
+  },
+  "layer1_conversation": {
+    "transcript": "T01 customer: hello\nT02 agent: I can help with order status, refunds, placing orders, or product information. How can I assist you today?\nT03 customer: place an order please\nT04 agent: Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+    "segments": [
+      {
+        "turn_id": "T01",
+        "speaker": "customer",
+        "text": "hello"
+      },
+      {
+        "turn_id": "T02",
+        "speaker": "agent",
+        "text": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?"
+      },
+      {
+        "turn_id": "T03",
+        "speaker": "customer",
+        "text": "place an order please"
+      },
+      {
+        "turn_id": "T04",
+        "speaker": "agent",
+        "text": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly."
+      }
+    ],
+    "intent": "place_order",
+    "behavioral_hints": [
+      {
+        "type": "chat_session",
+        "turn_ref": "T04",
+        "note": "Evidence was generated from the customer support chat transcript."
+      },
+      {
+        "type": "premature_closure",
+        "turn_ref": "T04",
+        "note": "Assistant told the customer the order was placed, but the placeOrder tool recorded no backend side effect."
+      }
+    ]
+  },
+  "layer2_execution": {
+    "function_calls": [
+      {
+        "name": "placeOrder",
+        "args": {
+          "userId": "user-123",
+          "requestedItems": "place an order please"
+        },
+        "result": {
+          "customerMessage": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+          "internalError": "Intentional hackathon demo fault: placeOrder returned a success message but did not write an order record or create any backend side effect.",
+          "orderPlaced": false,
+          "sideEffectCreated": false,
+          "simulatedOrderId": "ORD-DEMO-1781773628711",
+          "requestedItems": "place an order please",
+          "userId": "user-123",
+          "failureClass": "noop_side_effect"
+        },
+        "status": "error",
+        "turn_ref": "T04",
+        "error_message": "{\"customerMessage\":\"Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.\",\"internalError\":\"Intentional hackathon demo fault: placeOrder returned a success message but did not write an order record or create any backend side effect.\",\"orderPlaced\":false,\"sideEffectCreated\":false,\"simulatedOrderId\":\"ORD-DEMO-1781773628711\",\"requestedItems\":\"place an order please\",\"userId\":\"user-123\",\"failureClass\":\"noop_side_effect\"}"
+      }
+    ],
+    "side_effects": {
+      "appointment_created": false,
+      "appointment_id": null,
+      "sms_sent": false,
+      "crm_record_exists": true
+    },
+    "transitions": [
+      {
+        "from": "chat",
+        "to": "incident_investigation_input",
+        "roomId": "f8083fef-4837-4402-9e76-956d579fa4e7",
+        "analyzer": {
+          "chatEnded": true,
+          "shouldInvestigate": true,
+          "signals": [
+            "tool_error:placeOrder",
+            "place_order_workflow",
+            "place_order_noop",
+            "deceptive_success_reply"
+          ],
+          "reason": "Chat contains a simulated place-order no-op: the assistant confirmed success, but the tool recorded no backend order."
+        }
+      }
+    ]
+  },
+  "layer3_customer": {
+    "chatId": "chat_1781773527635_e3fj8t",
+    "userId": "user-123",
+    "roomId": "f8083fef-4837-4402-9e76-956d579fa4e7",
+    "analyzer": {
+      "chatEnded": true,
+      "shouldInvestigate": true,
+      "signals": [
+        "tool_error:placeOrder",
+        "place_order_workflow",
+        "place_order_noop",
+        "deceptive_success_reply"
+      ],
+      "reason": "Chat contains a simulated place-order no-op: the assistant confirmed success, but the tool recorded no backend order."
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": "2026-06-18T09:05:34.605Z",
+        "intent": null,
+        "toolsCalled": []
+      },
+      {
+        "role": "assistant",
+        "content": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
+        "timestamp": "2026-06-18T09:06:19.363Z",
+        "intent": null,
+        "toolsCalled": [],
+        "roomId": "d39fc55b-08af-418a-83f7-d3aa3a97b72e",
+        "analyzer": {
+          "chatEnded": false,
+          "shouldInvestigate": false,
+          "signals": [],
+          "reason": "Chat is still active; wait for customer closure or handoff before dashboard registration."
+        },
+        "workflowTrace": [
+          {
+            "step": "00",
+            "agent": "Customer",
+            "event": "customer_message",
+            "timestamp": "2026-06-18T09:06:11.444Z",
+            "bandMessageId": "f0d4d9ce-7aba-4623-a028-4a3f79e55400",
+            "payload": {
+              "chatId": "chat_1781773527635_e3fj8t",
+              "userId": "user-123",
+              "message": "hello",
+              "transcript_turns": 1
+            }
+          },
+          {
+            "step": "00",
+            "agent": "System",
+            "event": "band_remote_agents_recruited",
+            "timestamp": "2026-06-18T09:06:11.866Z",
+            "bandMessageId": "d10895dd-ff2c-4605-96d1-43667cd35825",
+            "payload": {
+              "agents": [
+                {
+                  "role": "supervisor",
+                  "status": "added"
+                },
+                {
+                  "role": "doer",
+                  "status": "added"
+                },
+                {
+                  "role": "tool_executor",
+                  "status": "added"
+                }
+              ],
+              "protocol": "Configured Band remote agents are added as room participants and receive directed @mentions for each handoff."
+            }
+          },
+          {
+            "step": "01",
+            "agent": "System",
+            "event": "supervisor_assignment",
+            "timestamp": "2026-06-18T09:06:12.286Z",
+            "bandMessageId": "7564488e-d099-4522-a427-f3bb9e68981f",
+            "payload": {
+              "instruction": "Supervisor, classify the latest customer intent using the chat transcript posted to this Band room.",
+              "latest_message": "hello"
+            }
+          },
+          {
+            "step": "01",
+            "agent": "Supervisor",
+            "event": "intent_analysis",
+            "timestamp": "2026-06-18T09:06:14.831Z",
+            "bandMessageId": "cb74665f-c944-4c71-875a-bc99e9ad37d1",
+            "payload": {
+              "intent": "unknown",
+              "originalMessage": "hello",
+              "userId": "user-123",
+              "transcript_turns": 1
+            }
+          },
+          {
+            "step": "02",
+            "agent": "Supervisor",
+            "event": "handoff_to_doer",
+            "timestamp": "2026-06-18T09:06:15.453Z",
+            "bandMessageId": "9cad3df5-6d9b-4d91-b55f-e05662c061fb",
+            "payload": {
+              "instruction": "Doer, use the Supervisor intent and Band room context to choose either a direct answer or a tool request.",
+              "intent": "unknown",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "hello"
+                }
+              ],
+              "latest_message": "hello",
+              "chatId": "chat_1781773527635_e3fj8t",
+              "userId": "user-123",
+              "band_history_count": 5
+            }
+          },
+          {
+            "step": "02",
+            "agent": "Doer",
+            "event": "policy_decision",
+            "timestamp": "2026-06-18T09:06:17.172Z",
+            "bandMessageId": "886241f4-68b4-447e-8160-bcb7cf9878db",
+            "payload": {
+              "action": "direct",
+              "response": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
+              "reasoning": "Unknown intent",
+              "band_history_count": 6
+            }
+          },
+          {
+            "step": "03",
+            "agent": "Doer",
+            "event": "direct_response_selected",
+            "timestamp": "2026-06-18T09:06:17.579Z",
+            "bandMessageId": "1cb0aaa9-1b6a-405d-8c64-888bee27a8fd",
+            "payload": {
+              "response": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
+              "reasoning": "Unknown intent"
+            }
+          },
+          {
+            "step": "04",
+            "agent": "Assistant",
+            "event": "draft_response",
+            "timestamp": "2026-06-18T09:06:17.995Z",
+            "bandMessageId": "3a720c24-e3a3-4a58-9776-b0042da7ee3c",
+            "payload": {
+              "message": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
+              "userId": "user-123",
+              "intent": "unknown",
+              "action": "direct"
+            }
+          },
+          {
+            "step": "05",
+            "agent": "EndAnalyzer",
+            "event": "analysis_assignment",
+            "timestamp": "2026-06-18T09:06:18.405Z",
+            "bandMessageId": "992a7afa-f788-4958-a3a5-acc92a54ce80",
+            "payload": {
+              "instruction": "Analyze whether this chat is ended. If ended and there are refund, handoff, or failed tool signals, convert it to incident evidence for the dashboard.",
+              "known_tools": []
+            }
+          },
+          {
+            "step": "05",
+            "agent": "EndAnalyzer",
+            "event": "analysis_result",
+            "timestamp": "2026-06-18T09:06:18.837Z",
+            "bandMessageId": "ae223e94-e838-46f8-8c42-be8caa7894d5",
+            "payload": {
+              "chatEnded": false,
+              "shouldInvestigate": false,
+              "signals": [],
+              "reason": "Chat is still active; wait for customer closure or handoff before dashboard registration.",
+              "incident": null,
+              "evidence_incident_id": "CHAT-chat_1781773527635_e3fj8t"
+            }
+          },
+          {
+            "step": "07",
+            "agent": "Assistant",
+            "event": "final_response",
+            "timestamp": "2026-06-18T09:06:19.178Z",
+            "bandMessageId": "910503a6-cf6d-4469-a978-3ed8478905df",
+            "payload": {
+              "message": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?",
+              "userId": "user-123",
+              "intent": "unknown",
+              "action": "direct",
+              "analyzer": {
+                "chatEnded": false,
+                "shouldInvestigate": false,
+                "signals": [],
+                "reason": "Chat is still active; wait for customer closure or handoff before dashboard registration."
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "place an order please",
+        "timestamp": "2026-06-18T09:07:01.103Z",
+        "toolsCalled": []
+      },
+      {
+        "role": "assistant",
+        "content": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+        "timestamp": "2026-06-18T09:07:10.447Z",
+        "intent": "place_order",
+        "toolsCalled": [
+          {
+            "name": "placeOrder",
+            "arguments": {
+              "userId": "user-123",
+              "requestedItems": "place an order please"
+            },
+            "result": {
+              "customerMessage": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+              "internalError": "Intentional hackathon demo fault: placeOrder returned a success message but did not write an order record or create any backend side effect.",
+              "orderPlaced": false,
+              "sideEffectCreated": false,
+              "simulatedOrderId": "ORD-DEMO-1781773628711",
+              "requestedItems": "place an order please",
+              "userId": "user-123",
+              "failureClass": "noop_side_effect"
+            },
+            "status": "error",
+            "startedAt": "2026-06-18T09:07:08.710Z",
+            "completedAt": "2026-06-18T09:07:08.711Z"
+          }
+        ],
+        "roomId": "f8083fef-4837-4402-9e76-956d579fa4e7",
+        "workflowTrace": [
+          {
+            "step": "00",
+            "agent": "Customer",
+            "event": "customer_message",
+            "timestamp": "2026-06-18T09:07:01.539Z",
+            "bandMessageId": "b5ea8a5f-c95a-4363-8f8d-28cfaf7401dd",
+            "payload": {
+              "chatId": "chat_1781773527635_e3fj8t",
+              "userId": "user-123",
+              "message": "place an order please",
+              "transcript_turns": 3
+            }
+          },
+          {
+            "step": "00",
+            "agent": "System",
+            "event": "band_remote_agents_recruited",
+            "timestamp": "2026-06-18T09:07:01.871Z",
+            "bandMessageId": "5d43ea6f-028d-41d4-9e74-68eb9bc72624",
+            "payload": {
+              "agents": [
+                {
+                  "role": "supervisor",
+                  "status": "added"
+                },
+                {
+                  "role": "doer",
+                  "status": "added"
+                },
+                {
+                  "role": "tool_executor",
+                  "status": "added"
+                }
+              ],
+              "protocol": "Configured Band remote agents are added as room participants and receive directed @mentions for each handoff."
+            }
+          },
+          {
+            "step": "01",
+            "agent": "System",
+            "event": "supervisor_assignment",
+            "timestamp": "2026-06-18T09:07:02.255Z",
+            "bandMessageId": "fc44d686-837f-4797-9668-3f1bbfe7887a",
+            "payload": {
+              "instruction": "Supervisor, classify the latest customer intent using the chat transcript posted to this Band room.",
+              "latest_message": "place an order please"
+            }
+          },
+          {
+            "step": "01",
+            "agent": "Supervisor",
+            "event": "intent_analysis",
+            "timestamp": "2026-06-18T09:07:04.612Z",
+            "bandMessageId": "b364a0cb-be86-48b0-bf16-88e1b7aa63a1",
+            "payload": {
+              "intent": "place_order",
+              "originalMessage": "place an order please",
+              "userId": "user-123",
+              "transcript_turns": 3
+            }
+          },
+          {
+            "step": "02",
+            "agent": "Supervisor",
+            "event": "handoff_to_doer",
+            "timestamp": "2026-06-18T09:07:05.196Z",
+            "bandMessageId": "8f03cfce-f109-47b6-b806-b60d8388a9a0",
+            "payload": {
+              "instruction": "Doer, use the Supervisor intent and Band room context to choose either a direct answer or a tool request.",
+              "intent": "place_order",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "hello"
+                },
+                {
+                  "role": "assistant",
+                  "content": "I can help with order status, refunds, placing orders, or product information. How can I assist you today?"
+                },
+                {
+                  "role": "user",
+                  "content": "place an order please"
+                }
+              ],
+              "latest_message": "place an order please",
+              "chatId": "chat_1781773527635_e3fj8t",
+              "userId": "user-123",
+              "band_history_count": 5
+            }
+          },
+          {
+            "step": "02",
+            "agent": "Doer",
+            "event": "policy_decision",
+            "timestamp": "2026-06-18T09:07:07.172Z",
+            "bandMessageId": "37ef831d-a08e-4413-87c8-45a08aa9d2db",
+            "payload": {
+              "action": "call_tool",
+              "tool": "placeOrder",
+              "params": {
+                "userId": "user-123",
+                "requestedItems": "place an order please"
+              },
+              "reasoning": "Customer asked to place a new order",
+              "band_history_count": 6
+            }
+          },
+          {
+            "step": "03",
+            "agent": "Doer",
+            "event": "tool_executor_assignment",
+            "timestamp": "2026-06-18T09:07:07.581Z",
+            "bandMessageId": "28b7e9b8-adc1-48cb-b4e1-4b92dfff1094",
+            "payload": {
+              "instruction": "Tool Executor, run the requested live support tool and post the result back to Band before the assistant responds.",
+              "decision": {
+                "action": "call_tool",
+                "tool": "placeOrder",
+                "params": {
+                  "userId": "user-123",
+                  "requestedItems": "place an order please"
+                },
+                "reasoning": "Customer asked to place a new order"
+              },
+              "tool": "placeOrder",
+              "params": {
+                "userId": "user-123",
+                "requestedItems": "place an order please"
+              },
+              "intent": "place_order",
+              "chatId": "chat_1781773527635_e3fj8t",
+              "userId": "user-123"
+            }
+          },
+          {
+            "step": "03",
+            "agent": "ToolExecutor",
+            "event": "execution_result",
+            "timestamp": "2026-06-18T09:07:09.631Z",
+            "bandMessageId": "cece2ed5-4b02-464e-b51e-6f8e5336ff5a",
+            "payload": {
+              "result": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+              "userId": "user-123",
+              "tool": "placeOrder",
+              "toolsCalled": [
+                {
+                  "name": "placeOrder",
+                  "arguments": {
+                    "userId": "user-123",
+                    "requestedItems": "place an order please"
+                  },
+                  "result": {
+                    "customerMessage": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+                    "internalError": "Intentional hackathon demo fault: placeOrder returned a success message but did not write an order record or create any backend side effect.",
+                    "orderPlaced": false,
+                    "sideEffectCreated": false,
+                    "simulatedOrderId": "ORD-DEMO-1781773628711",
+                    "requestedItems": "place an order please",
+                    "userId": "user-123",
+                    "failureClass": "noop_side_effect"
+                  },
+                  "status": "error",
+                  "startedAt": "2026-06-18T09:07:08.710Z",
+                  "completedAt": "2026-06-18T09:07:08.711Z"
+                }
+              ],
+              "band_history_count": 8
+            }
+          },
+          {
+            "step": "04",
+            "agent": "Assistant",
+            "event": "draft_response",
+            "timestamp": "2026-06-18T09:07:10.045Z",
+            "bandMessageId": "8c647a52-c474-45b4-a34d-c2cb708df092",
+            "payload": {
+              "message": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+              "userId": "user-123",
+              "intent": "place_order",
+              "action": "call_tool"
+            }
+          },
+          {
+            "step": "05",
+            "agent": "EndAnalyzer",
+            "event": "analysis_assignment",
+            "timestamp": "2026-06-18T09:07:10.447Z",
+            "bandMessageId": "c2672a23-0461-440b-8443-ee837e81d6e0",
+            "payload": {
+              "instruction": "Analyze whether this chat is ended. If ended and there are refund, handoff, or failed tool signals, convert it to incident evidence for the dashboard.",
+              "known_tools": [
+                "placeOrder"
+              ]
+            }
+          }
+        ],
+        "analyzer": {
+          "chatEnded": true,
+          "shouldInvestigate": true,
+          "signals": [
+            "tool_error:placeOrder",
+            "place_order_workflow",
+            "place_order_noop",
+            "deceptive_success_reply"
+          ],
+          "reason": "Chat contains a simulated place-order no-op: the assistant confirmed success, but the tool recorded no backend order."
+        }
+      }
+    ],
+    "tools": [
+      {
+        "name": "placeOrder",
+        "arguments": {
+          "userId": "user-123",
+          "requestedItems": "place an order please"
+        },
+        "result": {
+          "customerMessage": "Great news — I've placed your order ORD-DEMO-1781773628711. You'll receive a confirmation email shortly.",
+          "internalError": "Intentional hackathon demo fault: placeOrder returned a success message but did not write an order record or create any backend side effect.",
+          "orderPlaced": false,
+          "sideEffectCreated": false,
+          "simulatedOrderId": "ORD-DEMO-1781773628711",
+          "requestedItems": "place an order please",
+          "userId": "user-123",
+          "failureClass": "noop_side_effect"
+        },
+        "status": "error",
+        "startedAt": "2026-06-18T09:07:08.710Z",
+        "completedAt": "2026-06-18T09:07:08.711Z"
+      }
+    ]
+  }
+}
