@@ -70,12 +70,22 @@ npm run dev
 
 ---
 
-## Capture
+## Capture (automated)
+
+**Full walkthrough** (~2 min — timeline → investigation until **Cleared ✓** → report → CRM):
+
+```bash
+npm run dev
+npm run record-full-demo
+# → docs/screenshots/incident-room-full-demo.webm
+```
+
+**Screenshots + short clip:**
 
 ```bash
 npm run install:browsers   # once
 npm run dev
-npm run capture-demo         # screenshots + incident-room-demo.webm
+npm run capture-demo         # → PNGs + incident-room-demo.webm
 ```
 
 Regenerate PDF smoke test:

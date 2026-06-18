@@ -16,7 +16,7 @@ Built for the **Band of Agents Hackathon**, the project uses Band rooms as the c
   </a>
 </p>
 
-<p align="center"><em>▶ <a href="docs/screenshots/incident-room-demo.webm">Watch full demo</a> — hero incident <code>retell_call_clinic_44102</code></em></p>
+<p align="center"><em>▶ <a href="docs/screenshots/incident-room-demo.webm">Short demo</a> · <a href="docs/screenshots/incident-room-full-demo.webm">Full investigation</a> — <code>retell_call_clinic_44102</code></em></p>
 
 ---
 
@@ -251,9 +251,13 @@ http://localhost:3000
 
 Hero demo:
 
+<<<<<<< HEAD
 ```text
 retell_call_clinic_44102
 ```
+=======
+Regenerate media: `npm run record-full-demo` (full ~2 min video) or `npm run capture-demo` (screenshots + short clip)
+>>>>>>> e208d61 (Add full investigation video recorder and wait for Cleared state.)
 
 ---
 

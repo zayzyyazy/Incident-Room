@@ -12,6 +12,7 @@
     "install:browsers": "bash scripts/install-playwright-chromium.sh",
     "capture-screenshots": "node scripts/capture-demo-media.mjs",
     "capture-demo": "node scripts/capture-demo-media.mjs",
+    "record-full-demo": "node scripts/record-full-investigation.mjs",
     "validate-import-samples": "tsx scripts/validate-import-samples.mts",
     "validate-briefs": "tsx scripts/validate-investigation-briefs.mts"
   },

@@ -152,7 +152,12 @@ async function recordDemoVideo(browser) {
     await btn.click();
   }
 
-  await page.waitForTimeout(36000);
+  try {
+    await page.getByText("Cleared ✓").waitFor({ state: "visible", timeout: 150_000 });
+  } catch {
+    await page.waitForTimeout(90_000);
+  }
+  await page.waitForTimeout(4000);
 
   await openSection(page, "Reports");
   await page.waitForTimeout(3000);
