@@ -5,7 +5,6 @@ import {
   customerAckTurn,
   customerIntentTurn,
   listFailedTools,
-  primaryFailedTool,
 } from "@/lib/investigation/evidence-analysis";
 import { EvidencePoolItem } from "@/lib/report/types";
 

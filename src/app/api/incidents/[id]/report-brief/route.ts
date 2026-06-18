@@ -1,4 +1,4 @@
-import { getIncident } from "@/lib/incidents/store";
+import { getIncidentForRequest } from "@/lib/incidents/resolve";
 import { buildPdfBriefForInvestigation } from "@/lib/report/build-pdf-brief";
 
 type RouteParams = { params: { id: string } };
@@ -6,7 +6,7 @@ type RouteParams = { params: { id: string } };
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: RouteParams) {
-  const incident = getIncident(params.id);
+  const incident = await getIncidentForRequest(params.id);
   if (!incident) {
     return Response.json({ error: "Incident not found" }, { status: 404 });
   }

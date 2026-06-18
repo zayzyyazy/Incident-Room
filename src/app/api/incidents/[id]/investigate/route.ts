@@ -7,11 +7,14 @@ import {
   getIncident,
   startInvestigation,
 } from "@/lib/incidents/store";
+import { getIncidentForRequest } from "@/lib/incidents/resolve";
+import { persistFailureIncidentRecordIfNeeded } from "@/lib/incidents/failures";
+import { persistImportedIncidentRecordIfNeeded } from "@/lib/incidents/imported";
 
 type RouteParams = { params: { id: string } };
 
 export async function POST(_request: Request, { params }: RouteParams) {
-  const incident = getIncident(params.id);
+  const incident = await getIncidentForRequest(params.id);
 
   if (!incident) {
     return NextResponse.json(
@@ -76,6 +79,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
       crmLink: crm.link,
       crmLookup: crm.lookup,
     });
+    const latestRecord = getIncident(params.id);
+    await persistFailureIncidentRecordIfNeeded(latestRecord);
+    await persistImportedIncidentRecordIfNeeded(latestRecord);
 
     return NextResponse.json({
       ok: true,
@@ -91,6 +97,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const message =
       error instanceof Error ? error.message : "Investigation failed";
     const failed = failInvestigation(params.id, run.id, message);
+    const latestRecord = getIncident(params.id);
+    await persistFailureIncidentRecordIfNeeded(latestRecord);
+    await persistImportedIncidentRecordIfNeeded(latestRecord);
     return NextResponse.json(
       { ok: false, error: message, run: failed },
       { status: 500 },

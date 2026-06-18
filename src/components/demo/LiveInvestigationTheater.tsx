@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   InvestigationStep,
   stepsFromInvestigationRun,
@@ -10,7 +10,7 @@ import { isLocalBandRoom } from "@/lib/band/client";
 import { InvestigationRun } from "@/lib/incidents/types";
 import { VoiceIncidentEvidence } from "@/lib/evidence/types";
 import { InvestigationGameLevel } from "@/components/demo/InvestigationGameLevel";
-import { KlausDemoGraph } from "@/lib/workflow/klaus-demo-graph";
+import type { KlausDemoGraph } from "@/lib/workflow/klaus-demo-graph";
 import { dialogueSummary } from "@/lib/demo/game-level";
 import { getAgentDefinition } from "@/lib/agents/registry";
 
@@ -178,7 +178,6 @@ function FlowBeat({
 export function LiveInvestigationTheater({
   incidentId,
   evidence,
-  workflow,
   initialRun,
   onComplete,
   onStatusChange,
@@ -208,7 +207,6 @@ export function LiveInvestigationTheater({
   const [run, setRun] = useState<InvestigationRun | null>(initialRun ?? null);
   const [showEvidence, setShowEvidence] = useState(false);
 
-  const earnedRun = run?.pipeline === "earned_investigation" || Boolean(run?.earnedInvestigation);
   const bandRoomId = run?.earnedInvestigation?.verdictRoomId ?? run?.roomId;
   const bandIsLocal = Boolean(bandRoomId && isLocalBandRoom(bandRoomId));
   const bandUrl = bandRoomUrl(bandRoomId);
@@ -248,8 +246,6 @@ export function LiveInvestigationTheater({
     : collaborationSteps.length > 0
       ? collaborationSteps
       : steps;
-  const recentLiveSteps = liveFeedSteps.slice(-6);
-
   const setStatusBoth = (
     next: "idle" | "connecting" | "live" | "complete" | "error",
   ) => {

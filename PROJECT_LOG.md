@@ -8,7 +8,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Where we are right now
 
-**Status (Tue 17 Jun 2026):** **Demo-ready + media captured** — 12 README screenshots + `incident-room-demo.webm` in `docs/screenshots/`. Hero: `retell_call_clinic_44102`. Reply chat + Mongo chat sidebar still on `main`.
+**Status (Thu 18 Jun 2026):** **Main branch build fixed + demo-ready** — conflict-resolution cleanup is done, lint/build pass, failed ReplyChat incidents persist in MongoDB, and captured demo assets remain in `docs/screenshots/`. Hero: `retell_call_clinic_44102`.
 
 **Recording:** [docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md) (manual screen record) · automated assets via `npm run capture-demo`
 
@@ -27,6 +27,62 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 ---
 
 ## Timeline (newest first)
+
+### Thu 18 Jun 2026 — 16:11 — Production runtime hardening
+
+**What happened:** Removed local runtime dependencies from the production branch.
+**Problem (if any):** Serverless deploys cannot rely on `.data` writes, localhost debug ingest calls, or Band being available for every request.
+**Fix / result:** Imported/runtime incidents and CRM edits use Mongo when configured, Band room creation falls back to local rooms on API/env failures, localhost debug calls were removed, and lint/build pass.
+
+---
+
+### Thu 18 Jun 2026 — 13:50 — Mixed-language order requests fixed
+
+**What happened:** ReplyChat now recognizes rough German/English order requests like "stelle eine order bitteeee".
+**Problem (if any):** Those messages could miss `place_order` classification or fail while persisting the incident, causing a generic workflow-error reply instead of the intended fake order confirmation.
+**Fix / result:** Broadened order intent detection, made failure persistence non-fatal, aligned chat history DB selection, and verified the fake placed-order reply plus failed tool trace still work without Band.
+
+---
+
+### Thu 18 Jun 2026 — 13:34 — ReplyChat no longer blanks on order requests
+
+**What happened:** Restored safe fallback payloads for ReplyChat while keeping Band room handoffs as the first path.
+**Problem (if any):** In production, if Band assignment reads failed, Doer/Tool Executor could lose the `place_order` task and the frontend showed a blank assistant bubble.
+**Fix / result:** Doer and Tool Executor can recover from local fallback state, the API returns a visible error reply on failures, and the chat UI no longer renders empty assistant messages.
+
+---
+
+### Thu 18 Jun 2026 — 12:07 — Dashboard failed-chat JSON response fixed
+
+**What happened:** Hardened the dashboard incident API after Mongo-backed failures caused a frontend JSON parse error.
+**Problem (if any):** A malformed or older failure document could break `/api/incidents`, leaving the dashboard to parse an empty/non-JSON response.
+**Fix / result:** Failure records are now parsed defensively, malformed records are skipped, `/api/incidents` always returns JSON, and the dashboard logs API errors instead of crashing.
+
+---
+
+### Thu 18 Jun 2026 — 12:01 — Failed chats moved to MongoDB
+
+**What happened:** Failed ReplyChat incidents now persist in a Mongo `failures` collection instead of root JSON files.
+**Problem (if any):** Root `failed-chat-*.json` files were not reliable in production/serverless environments.
+**Fix / result:** Added Mongo-backed failure storage, merged those failures into dashboard incident APIs, and removed committed failed-chat JSON artifacts.
+
+---
+
+### Thu 18 Jun 2026 — 09:23 — Failed chats show on dashboard
+
+**What happened:** Failed ReplyChat JSON files now appear in the incident list.
+**Problem (if any):** The app already wrote `failed-chat-*.json`, but the dashboard filter hid those records unless they were demo submissions or imports.
+**Fix / result:** Added a failed-chat incident detector so root failed-chat evidence loads into the dashboard and can be opened for investigation.
+
+---
+
+### Thu 18 Jun 2026 — 08:58 — Main branch build fixed
+
+**What happened:** Cleaned up broken conflict-resolution leftovers on main.
+**Problem (if any):** Build/lint failed because of stale helper signatures, unused merge leftovers, missing `pdf-lib`, and a few TypeScript target/type mismatches.
+**Fix / result:** Restored the current Band client call shape, removed unused bindings, added the existing PDF dependency, fixed iterator compatibility, and verified lint/build pass.
+
+---
 
 ### Tue 17 Jun 2026 — README media + capture pipeline
 

@@ -119,29 +119,6 @@ export async function addParticipantToRoom(
   const text = await response.text();
   const body = text ? JSON.parse(text) : null;
 
-  // #region agent log
-  fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "aca1d4",
-    },
-    body: JSON.stringify({
-      sessionId: "aca1d4",
-      hypothesisId: "C",
-      location: "band/multi-agent.ts:addParticipantToRoom",
-      message: "participant add result",
-      data: {
-        roomId: roomId.slice(0, 8),
-        participantId: participantId.slice(0, 8),
-        status: response.status,
-        ok: response.ok,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   return { ok: response.ok, status: response.status, body };
 }
 
@@ -270,29 +247,6 @@ export async function postCauseRoomEvent(input: {
       metadata: input.metadata,
     };
   } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "C-D",
-        location: "band/multi-agent.ts:postCauseRoomEvent",
-        message: "postEvent failed",
-        data: {
-          role: input.role,
-          roomId: input.roomId.slice(0, 8),
-          messageType: input.messageType,
-          agentId: agent.profile.id.slice(0, 8),
-          err: error instanceof Error ? error.message.slice(0, 200) : String(error),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     throw error;
   }
 }

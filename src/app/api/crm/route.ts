@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import {
   generateCustomerId,
-  listCrmCustomers,
-  upsertCrmCustomer,
+  listCrmCustomersForRuntime,
+  upsertCrmCustomerForRuntime,
 } from "@/lib/crm/store";
 import { CrmCustomerSchema } from "@/lib/crm/types";
 
 export async function GET() {
-  return NextResponse.json({ ok: true, customers: listCrmCustomers() });
+  return NextResponse.json({ ok: true, customers: await listCrmCustomersForRuntime() });
 }
 
 export async function POST(request: Request) {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = CrmCustomerSchema.partial({ customer_id: true }).parse(body);
 
-    const customer = upsertCrmCustomer({
+    const customer = await upsertCrmCustomerForRuntime({
       ...parsed,
       customer_id:
         parsed.customer_id ?? generateCustomerId(parsed.name ?? "customer"),

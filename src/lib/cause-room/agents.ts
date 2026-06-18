@@ -77,27 +77,6 @@ async function runWithFallback<T extends z.ZodType>(
     const fallback = primary.fallback;
     const errText =
       primaryError instanceof Error ? primaryError.message : String(primaryError);
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "A-B",
-        location: "cause-room/agents.ts:runWithFallback",
-        message: "LLM schema validation failed",
-        data: {
-          modelKey,
-          envelopeType: envelope?.type,
-          errSnippet: errText.slice(0, 500),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     const validationHint =
       errText.includes("Invalid input") ||
       errText.includes("invalid_type") ||

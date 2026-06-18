@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { deleteCrmCustomer, getCrmCustomer, upsertCrmCustomer } from "@/lib/crm/store";
+import {
+  deleteCrmCustomerForRuntime,
+  getCrmCustomerForRuntime,
+  upsertCrmCustomerForRuntime,
+} from "@/lib/crm/store";
 import { CrmCustomerSchema } from "@/lib/crm/types";
 
 type RouteParams = { params: { id: string } };
 
 export async function GET(_request: Request, { params }: RouteParams) {
-  const customer = getCrmCustomer(params.id);
+  const customer = await getCrmCustomerForRuntime(params.id);
   if (!customer) {
     return NextResponse.json({ ok: false, error: "Customer not found" }, { status: 404 });
   }
@@ -19,7 +23,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       ...body,
       customer_id: params.id,
     });
-    const customer = upsertCrmCustomer(parsed);
+    const customer = await upsertCrmCustomerForRuntime(parsed);
     return NextResponse.json({ ok: true, customer });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid customer";
@@ -28,7 +32,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const deleted = deleteCrmCustomer(params.id);
+  const deleted = await deleteCrmCustomerForRuntime(params.id);
   if (!deleted) {
     return NextResponse.json({ ok: false, error: "Customer not found" }, { status: 404 });
   }

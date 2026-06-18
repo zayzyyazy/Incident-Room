@@ -8,23 +8,6 @@ function isBandAgentApiKey(apiKey: string): boolean {
 
 async function fetchAgentProfile(apiKey: string): Promise<BandAgentProfile | null> {
   if (!isBandAgentApiKey(apiKey)) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "H1",
-        location: "internal-agents.ts:fetchAgentProfile",
-        message: "skipped non-Band agent key format",
-        data: { keyPrefix: apiKey.slice(0, 8) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return null;
   }
 
@@ -35,29 +18,6 @@ async function fetchAgentProfile(apiKey: string): Promise<BandAgentProfile | nul
   const text = await response.text();
   const body = text ? JSON.parse(text) : {};
   if (!response.ok) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "H2",
-        location: "internal-agents.ts:fetchAgentProfile",
-        message: "Band profile fetch failed for internal key",
-        data: {
-          status: response.status,
-          code:
-            body?.error?.code ??
-            (body as { code?: string })?.code ??
-            null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     console.warn(
       "Band internal agent key rejected:",
       JSON.stringify(body?.error ?? body),
@@ -134,28 +94,6 @@ export async function resolveInternalBandAgents(): Promise<InternalBandAgents> {
       };
     }
   }
-
-  // #region agent log
-  fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "aca1d4",
-    },
-    body: JSON.stringify({
-      sessionId: "aca1d4",
-      hypothesisId: "H3",
-      location: "internal-agents.ts:resolveInternalBandAgents",
-      message: "internal agents resolved",
-      data: {
-        hasNormalizer: Boolean(out.normalizer),
-        hasVerdictJudge: Boolean(out.verdictJudge),
-        hasRoomHost: Boolean(out.roomHost),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   return out;
 }

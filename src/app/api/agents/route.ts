@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     console.log(`👤 User ID: ${userId}`);
     
     // Create Band room
-    const room = await createRoom("customer-support-room");
+    const room = await createRoom({ title: "customer-support-room" });
     console.log(`🏠 Room Created: ${room.id}`);
     
     // Step 1: Supervisor analyzes intent using LangGraph

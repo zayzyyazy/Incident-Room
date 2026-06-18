@@ -4,6 +4,7 @@ import { VerdictOutcome } from "@/lib/investigation/events";
 import { InvestigationRun } from "@/lib/incidents/types";
 import { runReportSynthesizer, briefIsTrustworthy } from "@/lib/agents/report-synthesizer";
 import { computeVerdict } from "@/lib/investigation/evidence-analysis";
+import { IncidentPdfBrief } from "@/lib/report/types";
 
 export async function buildPdfBriefForInvestigation(input: {
   evidence: VoiceIncidentEvidence;

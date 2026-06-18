@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { resolveCrmForEvidence } from "@/lib/crm/lookup";
-import { getIncident } from "@/lib/incidents/store";
+import { getIncidentForRequest } from "@/lib/incidents/resolve";
 
 type RouteParams = { params: { id: string } };
 
 export async function GET(_request: Request, { params }: RouteParams) {
-  const incident = getIncident(params.id);
+  const incident = await getIncidentForRequest(params.id);
 
   if (!incident) {
     return NextResponse.json(

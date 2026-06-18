@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { reseedCrmFromFixture } from "@/lib/crm/store";
+import { reseedCrmFromFixtureForRuntime } from "@/lib/crm/store";
 
 export async function POST() {
   try {
-    const customers = reseedCrmFromFixture();
+    const customers = await reseedCrmFromFixtureForRuntime();
     return NextResponse.json({ ok: true, customers, count: customers.length });
   } catch (error) {
     return NextResponse.json(

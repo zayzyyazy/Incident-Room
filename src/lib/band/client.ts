@@ -71,7 +71,7 @@ async function bandFetch<T>(
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
-      ...fetchInit.headers,
+      ...init?.headers,
     },
   });
 
@@ -208,45 +208,11 @@ export async function createRoom(options?: {
 }): Promise<BandChatRoom> {
   const explicitReuse = options?.reuseRoomId?.trim();
   if (explicitReuse && UUID_RE.test(explicitReuse)) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "E-fix",
-        location: "band/client.ts:createRoom:explicit-reuse",
-        message: "reusing explicit Band room id",
-        data: { roomId: explicitReuse.slice(0, 8), title: options?.title?.slice(0, 40) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return { id: explicitReuse, title: options?.title };
   }
 
   const reuseId = process.env.BAND_REUSE_ROOM_ID?.trim();
   if (reuseId && UUID_RE.test(reuseId)) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "E-fix",
-        location: "band/client.ts:createRoom:env-reuse",
-        message: "reusing BAND_REUSE_ROOM_ID",
-        data: { roomId: reuseId.slice(0, 8), title: options?.title?.slice(0, 40) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return { id: reuseId, title: options?.title };
   }
 
@@ -260,33 +226,11 @@ export async function createRoom(options?: {
     chat.title = options.title.trim();
   }
 
-  // #region agent log
-  fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "aca1d4",
-    },
-    body: JSON.stringify({
-      sessionId: "aca1d4",
-      hypothesisId: "A",
-      location: "band/client.ts:createRoom:before",
-      message: "creating Band chat room",
-      data: {
-        title: options?.title?.slice(0, 80) ?? null,
-        hasTaskId: Boolean(options?.taskId),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   try {
     const raw = await bandFetch<unknown>("/agent/chats", {
       method: "POST",
-      apiKey: options?.apiKey,
       body: JSON.stringify({ chat }),
-    });
+    }, options?.apiKey);
 
     const room = requireId(
       "createRoom",
@@ -294,77 +238,19 @@ export async function createRoom(options?: {
       raw,
     );
 
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "A",
-        location: "band/client.ts:createRoom:success",
-        message: "Band chat room created",
-        data: { roomId: room.id.slice(0, 8) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     return room;
   } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "A-E",
-        location: "band/client.ts:createRoom:error",
-        message: "createRoom failed",
-        data: {
-          status: error instanceof BandApiError ? error.status : null,
-          limitReached: bandRoomLimitReached(error),
-          err:
-            error instanceof Error ? error.message.slice(0, 240) : String(error),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    const localRoom = {
+      id: localBandRoomId(),
+      title: options?.title,
+    };
 
-    if (bandRoomLimitReached(error)) {
-      const localRoom = {
-        id: localBandRoomId(),
-        title: options?.title,
-      };
+    console.warn(
+      "Band room creation failed; using local room fallback.",
+      error instanceof Error ? error.message : error,
+    );
 
-      // #region agent log
-      fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "aca1d4",
-        },
-        body: JSON.stringify({
-          sessionId: "aca1d4",
-          hypothesisId: "E",
-          location: "band/client.ts:createRoom:local-fallback",
-          message: "using local Band room fallback after limit_reached",
-          data: { roomId: localRoom.id.slice(0, 16) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
-      return localRoom;
-    }
-
-    throw error;
+    return localRoom;
   }
 }
 
@@ -382,7 +268,6 @@ export async function postChatMessageAsAgent(
     return localBandMessage(content, options?.metadata);
   }
 
-  const { apiKey, baseUrl } = getConfig(options?.apiKey);
   const mentions = options?.mentions ?? [];
 
   const body: Record<string, unknown> = {
@@ -396,10 +281,9 @@ export async function postChatMessageAsAgent(
     `/agent/chats/${roomId}/messages`,
     {
       method: "POST",
-      apiKey,
-      baseUrl,
       body: JSON.stringify(body),
     },
+    options?.apiKey,
   );
 
   const message = requireId(
@@ -527,12 +411,8 @@ export async function postEvent(
     };
   }
 
-  const { apiKey, baseUrl } = getConfig(apiKeyOverride);
-
   return bandFetch(`/agent/chats/${roomId}/events`, {
     method: "POST",
-    apiKey,
-    baseUrl,
     body: JSON.stringify({
       event: {
         message_type: eventType,

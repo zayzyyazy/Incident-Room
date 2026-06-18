@@ -19,10 +19,14 @@ import { runTwoAgentInvestigation } from "@/lib/orchestrator/run-two-agent-inves
 import {
   completeInvestigation,
   failInvestigation,
-  persistFailedChatEvidence,
+  getIncident,
   startInvestigation,
   upsertIncidentFromEvidence,
 } from "@/lib/incidents/store";
+import {
+  persistFailedChatEvidence,
+  persistFailureIncidentRecordIfNeeded,
+} from "@/lib/incidents/failures";
 
 type WorkflowTraceEntry = {
   step: string;
@@ -52,7 +56,7 @@ type RegisteredIncident = {
   id: string;
   title: string;
   status: string;
-  evidenceFile?: string;
+  persistenceRef?: string | null;
   investigation?: {
     status: string;
     runId: string;
@@ -239,12 +243,14 @@ async function runAutomaticInvestigation(
     };
 
     const completed = completeInvestigation(incidentId, run.id, {
+      pipeline: "legacy",
       roomId: result.roomId,
       bandMessageIds: result.bandMessageIds,
       conversationAnalysis: result.conversationAnalysis,
       outcomeAnalysis: result.outcomeAnalysis,
       contradiction,
     });
+    await persistFailureIncidentRecordIfNeeded(getIncident(incidentId));
 
     return {
       status: completed.status,
@@ -254,6 +260,7 @@ async function runAutomaticInvestigation(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Investigation failed";
     const failed = failInvestigation(incidentId, run.id, message);
+    await persistFailureIncidentRecordIfNeeded(getIncident(incidentId));
     return {
       status: failed.status,
       runId: failed.id,
@@ -408,8 +415,10 @@ export async function POST(request: Request) {
     console.log("\n📝 Step 2: Doer (LangGraph) applying business policies...");
     const doerResult = await runDoer(
       {
+        messages: fullMessages,
         roomId: roomId,
         userId: userId,
+        intent,
       },
       threadId
     );
@@ -457,8 +466,10 @@ export async function POST(request: Request) {
 
       const toolResult = await runToolExecutor(
         {
+          messages: fullMessages,
           roomId: roomId,
           userId: userId,
+          decision,
         },
         threadId
       );
@@ -536,13 +547,13 @@ export async function POST(request: Request) {
 
     let incident: RegisteredIncident | null = null;
     if (analyzer.chatEnded && analyzer.shouldInvestigate) {
-      const evidenceFile = persistFailedChatEvidence(evidence);
+      const persistenceRef = await persistFailedChatEvidence(evidence);
       const record = upsertIncidentFromEvidence(evidence);
       incident = {
         id: record.id,
         title: record.evidence.title,
         status: record.status,
-        evidenceFile,
+        persistenceRef,
       };
 
       if (analyzer.signals.includes("place_order_noop")) {
@@ -599,8 +610,12 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("❌ ReplyChat API Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ 
-      error: error instanceof Error ? error.message : "Internal server error" 
+      error: message,
+      reply:
+        "I hit an internal support workflow issue before I could complete that. Please try again or ask for a human teammate.",
     }, { status: 500 });
   }
 }

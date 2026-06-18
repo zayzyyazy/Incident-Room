@@ -95,36 +95,6 @@ export async function completeJson<T extends z.ZodType>(
   try {
     return schema.parse(normalized);
   } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "aca1d4",
-      },
-      body: JSON.stringify({
-        sessionId: "aca1d4",
-        hypothesisId: "A-B",
-        location: "llm/router.ts:completeJson",
-        message: "schema.parse failed after normalize",
-        data: {
-          hasTransform: Boolean(options.transformParsed),
-          parsedKeys:
-            normalized && typeof normalized === "object"
-              ? Object.keys(normalized as object)
-              : [],
-          issueCount:
-            error &&
-            typeof error === "object" &&
-            "issues" in error &&
-            Array.isArray((error as { issues: unknown[] }).issues)
-              ? (error as { issues: unknown[] }).issues.length
-              : 0,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     throw error;
   }
 }

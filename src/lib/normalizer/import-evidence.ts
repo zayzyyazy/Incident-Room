@@ -239,7 +239,7 @@ function buildTranscriptString(segments: SegmentDraft[]): string {
     .join("\n");
 }
 
-function toolFromRecord(item: Record<string, unknown>, _index: number): ToolDraft | null {
+function toolFromRecord(item: Record<string, unknown>): ToolDraft | null {
   const fn = asRecord(item.function);
   const name = pickString(
     item.name,
@@ -310,10 +310,10 @@ function collectToolCalls(root: Record<string, unknown>): ToolDraft[] {
   for (const key of TOOL_ARRAY_KEYS) {
     const arr = asArray(root[key]);
     if (!arr) continue;
-    arr.forEach((item, index) => {
+    arr.forEach((item) => {
       const record = asRecord(item);
       if (!record) return;
-      const mapped = toolFromRecord(record, index);
+      const mapped = toolFromRecord(record);
       if (mapped) tools.push(mapped);
     });
   }
@@ -321,10 +321,10 @@ function collectToolCalls(root: Record<string, unknown>): ToolDraft[] {
   const layer2 = asRecord(root.layer2_execution);
   const layer2Calls = asArray(layer2?.function_calls);
   if (layer2Calls) {
-    layer2Calls.forEach((item, index) => {
+    layer2Calls.forEach((item) => {
       const record = asRecord(item);
       if (!record) return;
-      const mapped = toolFromRecord(record, index);
+      const mapped = toolFromRecord(record);
       if (mapped) tools.push(mapped);
     });
   }
@@ -333,10 +333,10 @@ function collectToolCalls(root: Record<string, unknown>): ToolDraft[] {
   for (const message of messages) {
     const embedded = asArray(message.tool_calls);
     if (!embedded) continue;
-    embedded.forEach((item, index) => {
+    embedded.forEach((item) => {
       const record = asRecord(item);
       if (!record) return;
-      const mapped = toolFromRecord(record, tools.length + index);
+      const mapped = toolFromRecord(record);
       if (mapped) tools.push(mapped);
     });
   }

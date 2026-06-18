@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getIncident } from "@/lib/incidents/store";
+import { getIncidentForRequest } from "@/lib/incidents/resolve";
 import { loadLeapingAgentSlice } from "@/lib/localization-room/load-artifact";
 import { buildKlausDemoGraph } from "@/lib/workflow/klaus-demo-graph";
 
 type RouteParams = { params: { id: string } };
 
 export async function GET(_request: Request, { params }: RouteParams) {
-  const incident = getIncident(params.id);
+  const incident = await getIncidentForRequest(params.id);
   if (!incident) {
     return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
   }

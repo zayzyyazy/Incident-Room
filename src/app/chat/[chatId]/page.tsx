@@ -169,7 +169,14 @@ export default function ChatPage() {
           conversationHistory: messages,
         }),
       });
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok) {
+        throw new Error(data.reply || data.error || "ReplyChat request failed");
+      }
+      if (!data.reply) {
+        throw new Error(data.error || "ReplyChat returned an empty reply");
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -210,6 +217,18 @@ export default function ChatPage() {
       await loadChatList();
     } catch (error) {
       console.error("Error sending message:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        role: "assistant",
+        content:
+          error instanceof Error
+            ? error.message
+            : "I hit an internal support workflow issue.",
+        tools_called: [],
+        toolsCalled: [],
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }

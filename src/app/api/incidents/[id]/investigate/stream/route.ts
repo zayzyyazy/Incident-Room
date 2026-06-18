@@ -6,6 +6,9 @@ import {
   getIncident,
   startInvestigation,
 } from "@/lib/incidents/store";
+import { getIncidentForRequest } from "@/lib/incidents/resolve";
+import { persistFailureIncidentRecordIfNeeded } from "@/lib/incidents/failures";
+import { persistImportedIncidentRecordIfNeeded } from "@/lib/incidents/imported";
 import { runEarnedInvestigation } from "@/lib/orchestrator/run-earned-investigation";
 import { runNoActionableReview, shouldSkipFullInvestigation } from "@/lib/orchestrator/run-no-actionable-review";
 import {
@@ -19,7 +22,7 @@ type RouteParams = { params: { id: string } };
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: RouteParams) {
-  const incident = getIncident(params.id);
+  const incident = await getIncidentForRequest(params.id);
 
   if (!incident) {
     return new Response("Incident not found", { status: 404 });
@@ -61,6 +64,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
             crmLink: crm.link,
             crmLookup: crm.lookup,
           });
+          const latestRecord = getIncident(params.id);
+          await persistFailureIncidentRecordIfNeeded(latestRecord);
+          await persistImportedIncidentRecordIfNeeded(latestRecord);
 
           send({ type: "complete", run: completed, demoPath: "no_actionable" });
           return;
@@ -112,6 +118,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
             distinctBandAgents: earned.distinctBandAgents,
           },
         });
+        const latestRecord = getIncident(params.id);
+        await persistFailureIncidentRecordIfNeeded(latestRecord);
+        await persistImportedIncidentRecordIfNeeded(latestRecord);
 
         send({
           type: "complete",
@@ -125,6 +134,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
         const message =
           error instanceof Error ? error.message : "Investigation failed";
         const failed = failInvestigation(params.id, run.id, message);
+        const latestRecord = getIncident(params.id);
+        await persistFailureIncidentRecordIfNeeded(latestRecord);
+        await persistImportedIncidentRecordIfNeeded(latestRecord);
         send({ type: "error", error: message, run: failed });
       } finally {
         controller.close();
