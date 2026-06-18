@@ -27,6 +27,12 @@ yarn-error.log*
 .env
 .env*.local
 
+# local runtime data (fake CRM edits, etc.)
+.data/
+
+# playwright browsers (npm run install:browsers)
+.playwright-browsers/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

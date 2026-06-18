@@ -12,6 +12,7 @@ type CompletionOptions = {
   model: string;
   messages: LlmMessage[];
   temperature?: number;
+  transformParsed?: (parsed: unknown) => unknown;
 };
 
 const AIML_BASE = "https://api.aimlapi.com/v1";
@@ -87,7 +88,45 @@ export async function completeJson<T extends z.ZodType>(
     parsed = JSON.parse(match[0]);
   }
 
-  return schema.parse(parsed);
+  const normalized = options.transformParsed
+    ? options.transformParsed(parsed)
+    : parsed;
+
+  try {
+    return schema.parse(normalized);
+  } catch (error) {
+    // #region agent log
+    fetch("http://127.0.0.1:7414/ingest/8c489388-e9c2-47c1-ab4e-bc98ccacfe33", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "aca1d4",
+      },
+      body: JSON.stringify({
+        sessionId: "aca1d4",
+        hypothesisId: "A-B",
+        location: "llm/router.ts:completeJson",
+        message: "schema.parse failed after normalize",
+        data: {
+          hasTransform: Boolean(options.transformParsed),
+          parsedKeys:
+            normalized && typeof normalized === "object"
+              ? Object.keys(normalized as object)
+              : [],
+          issueCount:
+            error &&
+            typeof error === "object" &&
+            "issues" in error &&
+            Array.isArray((error as { issues: unknown[] }).issues)
+              ? (error as { issues: unknown[] }).issues.length
+              : 0,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    throw error;
+  }
 }
 
 export const AGENT_MODELS = {
@@ -99,6 +138,26 @@ export const AGENT_MODELS = {
   outcomeInvestigator: {
     provider: "featherless" as const,
     model: "deepseek-ai/DeepSeek-V3",
+    fallback: { provider: "aimlapi" as const, model: "gpt-4o" },
+  },
+  claimTracer: {
+    provider: "aimlapi" as const,
+    model: "gpt-4o-mini",
+    fallback: { provider: "aimlapi" as const, model: "gpt-4o" },
+  },
+  backendWitness: {
+    provider: "aimlapi" as const,
+    model: "gpt-4o-mini",
+    fallback: { provider: "aimlapi" as const, model: "gpt-4o" },
+  },
+  causalJudge: {
+    provider: "aimlapi" as const,
+    model: "gpt-4o",
+    fallback: { provider: "aimlapi" as const, model: "gpt-4o-mini" },
+  },
+  reportSynthesizer: {
+    provider: "aimlapi" as const,
+    model: "gpt-4o-mini",
     fallback: { provider: "aimlapi" as const, model: "gpt-4o" },
   },
 };

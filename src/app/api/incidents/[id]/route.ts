@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveCrmForEvidence } from "@/lib/crm/lookup";
 import { getIncident } from "@/lib/incidents/store";
 
 type RouteParams = { params: { id: string } };
@@ -13,5 +14,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     );
   }
 
-  return NextResponse.json({ ok: true, incident });
+  const crm = resolveCrmForEvidence(incident.evidence);
+
+  return NextResponse.json({
+    ok: true,
+    incident,
+    crmPreview: crm.lookup,
+    crmLinkPreview: crm.link,
+  });
 }
