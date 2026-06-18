@@ -5,7 +5,7 @@ import { FAILURES_COLLECTION, isMongoConfigured } from "@/lib/mongodb/config";
 import { getMongoDb } from "@/lib/mongodb";
 
 type FailureDocument = {
-  incidentId: string;
+  incidentId?: string;
   evidence: VoiceIncidentEvidence;
   status: IncidentRecord["status"];
   createdAt: string;
@@ -15,20 +15,39 @@ type FailureDocument = {
   source: "replychat_failure";
 };
 
+type FailureDocumentLike = FailureDocument & {
+  incident_id?: string;
+};
+
 function nowIso() {
   return new Date().toISOString();
 }
 
-function failureRecordFromDocument(document: FailureDocument): IncidentRecord {
+function failureRecordFromDocument(document: FailureDocumentLike): IncidentRecord {
+  const evidence = VoiceIncidentEvidenceSchema.parse(document.evidence);
+  const incidentId = document.incidentId ?? document.incident_id ?? evidence.incident_id;
+
   return {
-    id: document.incidentId,
-    evidence: VoiceIncidentEvidenceSchema.parse(document.evidence),
-    status: document.status,
-    createdAt: document.createdAt,
-    updatedAt: document.updatedAt,
+    id: incidentId,
+    evidence,
+    status: document.status ?? "pending",
+    createdAt: document.createdAt ?? document.updatedAt ?? nowIso(),
+    updatedAt: document.updatedAt ?? document.createdAt ?? nowIso(),
     lastRoomId: document.lastRoomId,
     investigations: document.investigations ?? [],
   };
+}
+
+function safeFailureRecordFromDocument(
+  document: FailureDocumentLike,
+): IncidentRecord | null {
+  try {
+    const record = failureRecordFromDocument(document);
+    return isFailedChatRecord(record) ? record : null;
+  } catch (error) {
+    console.warn("Skipping malformed failure incident document", error);
+    return null;
+  }
 }
 
 export function isFailedChatEvidence(evidence: VoiceIncidentEvidence) {
@@ -116,11 +135,13 @@ export async function listFailureIncidents(): Promise<IncidentRecord[]> {
 
   const collection = await failuresCollection();
   const documents = await collection
-    .find({ source: "replychat_failure" })
+    .find({})
     .sort({ updatedAt: -1 })
     .toArray();
 
-  return documents.map(failureRecordFromDocument);
+  return documents
+    .map((document) => safeFailureRecordFromDocument(document))
+    .filter((record): record is IncidentRecord => record !== null);
 }
 
 export async function getFailureIncident(
@@ -131,6 +152,10 @@ export async function getFailureIncident(
   }
 
   const collection = await failuresCollection();
-  const document = await collection.findOne({ incidentId });
-  return document ? failureRecordFromDocument(document) : undefined;
+  const document =
+    (await collection.findOne({ incidentId })) ??
+    (await collection.findOne({ "evidence.incident_id": incidentId })) ??
+    (await collection.findOne({ incident_id: incidentId }));
+  const record = document ? safeFailureRecordFromDocument(document) : null;
+  return record ?? undefined;
 }

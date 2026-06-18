@@ -36,22 +36,32 @@ function summaryFromIncident(incident: IncidentRecord): IncidentSummary {
 }
 
 export async function GET() {
-  const merged = new Map<string, IncidentSummary>();
+  try {
+    const merged = new Map<string, IncidentSummary>();
 
-  for (const incident of listIncidents()) {
-    merged.set(incident.id, incident);
+    for (const incident of listIncidents()) {
+      merged.set(incident.id, incident);
+    }
+
+    for (const failure of await listFailureIncidents()) {
+      merged.set(failure.id, summaryFromIncident(failure));
+    }
+
+    const incidents = Array.from(merged.values()).sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+
+    return NextResponse.json({ ok: true, incidents });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to load incidents";
+    console.error("Failed to list incidents:", error);
+    return NextResponse.json(
+      { ok: false, error: message, incidents: [] },
+      { status: 500 },
+    );
   }
-
-  for (const failure of await listFailureIncidents()) {
-    merged.set(failure.id, summaryFromIncident(failure));
-  }
-
-  const incidents = Array.from(merged.values()).sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
-
-  return NextResponse.json({ ok: true, incidents });
 }
 
 export async function POST(request: Request) {

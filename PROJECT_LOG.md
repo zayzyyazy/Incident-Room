@@ -28,6 +28,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Timeline (newest first)
 
+### Thu 18 Jun 2026 — 12:07 — Dashboard failed-chat JSON response fixed
+
+**What happened:** Hardened the dashboard incident API after Mongo-backed failures caused a frontend JSON parse error.
+**Problem (if any):** A malformed or older failure document could break `/api/incidents`, leaving the dashboard to parse an empty/non-JSON response.
+**Fix / result:** Failure records are now parsed defensively, malformed records are skipped, `/api/incidents` always returns JSON, and the dashboard logs API errors instead of crashing.
+
+---
+
 ### Thu 18 Jun 2026 — 12:01 — Failed chats moved to MongoDB
 
 **What happened:** Failed ReplyChat incidents now persist in a Mongo `failures` collection instead of root JSON files.

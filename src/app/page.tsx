@@ -30,10 +30,19 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const response = await fetch("/api/incidents");
-      const data = await response.json();
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Incidents API returned an empty response.");
+      }
+      const data = JSON.parse(text);
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to load incidents");
+      }
       if (data.ok) {
         setIncidents(data.incidents);
       }
+    } catch (error) {
+      console.error("Failed to load incidents:", error);
     } finally {
       setLoading(false);
     }
