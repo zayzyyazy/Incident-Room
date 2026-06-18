@@ -19,10 +19,14 @@ import { runTwoAgentInvestigation } from "@/lib/orchestrator/run-two-agent-inves
 import {
   completeInvestigation,
   failInvestigation,
-  persistFailedChatEvidence,
+  getIncident,
   startInvestigation,
   upsertIncidentFromEvidence,
 } from "@/lib/incidents/store";
+import {
+  persistFailedChatEvidence,
+  persistFailureIncidentRecordIfNeeded,
+} from "@/lib/incidents/failures";
 
 type WorkflowTraceEntry = {
   step: string;
@@ -52,7 +56,7 @@ type RegisteredIncident = {
   id: string;
   title: string;
   status: string;
-  evidenceFile?: string;
+  persistenceRef?: string | null;
   investigation?: {
     status: string;
     runId: string;
@@ -246,6 +250,7 @@ async function runAutomaticInvestigation(
       outcomeAnalysis: result.outcomeAnalysis,
       contradiction,
     });
+    await persistFailureIncidentRecordIfNeeded(getIncident(incidentId));
 
     return {
       status: completed.status,
@@ -255,6 +260,7 @@ async function runAutomaticInvestigation(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Investigation failed";
     const failed = failInvestigation(incidentId, run.id, message);
+    await persistFailureIncidentRecordIfNeeded(getIncident(incidentId));
     return {
       status: failed.status,
       runId: failed.id,
@@ -537,13 +543,13 @@ export async function POST(request: Request) {
 
     let incident: RegisteredIncident | null = null;
     if (analyzer.chatEnded && analyzer.shouldInvestigate) {
-      const evidenceFile = persistFailedChatEvidence(evidence);
+      const persistenceRef = await persistFailedChatEvidence(evidence);
       const record = upsertIncidentFromEvidence(evidence);
       incident = {
         id: record.id,
         title: record.evidence.title,
         status: record.status,
-        evidenceFile,
+        persistenceRef,
       };
 
       if (analyzer.signals.includes("place_order_noop")) {

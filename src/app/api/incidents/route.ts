@@ -5,6 +5,8 @@ import {
   listIncidents,
   upsertIncidentFromEvidence,
 } from "@/lib/incidents/store";
+import { listFailureIncidents } from "@/lib/incidents/failures";
+import { IncidentRecord, IncidentSummary } from "@/lib/incidents/types";
 import { fetchChatMessages } from "@/lib/chat/mongo-queries";
 import { mongoChatToImportJson } from "@/lib/chat/mongo-to-evidence";
 import { isMongoConfigured } from "@/lib/mongodb/config";
@@ -16,8 +18,40 @@ const PostSchema = z.union([
   z.object({ chatId: z.string().min(1) }),
 ]);
 
+function summaryFromIncident(incident: IncidentRecord): IncidentSummary {
+  const last = incident.investigations.at(-1);
+  return {
+    id: incident.id,
+    title: incident.evidence.title,
+    source_platform: incident.evidence.source_platform,
+    status: incident.status,
+    updatedAt: incident.updatedAt,
+    investigationCount: incident.investigations.length,
+    lastVerdict: last?.conversationAnalysis?.conversation_verdict,
+    lastExecutionVerdict: last?.outcomeAnalysis?.execution_verdict,
+    lastCause: last?.causeRoom?.causeFinding.cause,
+    lastCauseClass: last?.causeRoom?.causeFinding.cause_class,
+    lastRoomId: incident.lastRoomId ?? last?.roomId,
+  };
+}
+
 export async function GET() {
-  return NextResponse.json({ ok: true, incidents: listIncidents() });
+  const merged = new Map<string, IncidentSummary>();
+
+  for (const incident of listIncidents()) {
+    merged.set(incident.id, incident);
+  }
+
+  for (const failure of await listFailureIncidents()) {
+    merged.set(failure.id, summaryFromIncident(failure));
+  }
+
+  const incidents = Array.from(merged.values()).sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+
+  return NextResponse.json({ ok: true, incidents });
 }
 
 export async function POST(request: Request) {

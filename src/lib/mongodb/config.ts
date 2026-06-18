@@ -1,5 +1,6 @@
 export const DEFAULT_MONGO_DB = "bands_hackathon_db";
 export const CHATS_COLLECTION = "chats";
+export const FAILURES_COLLECTION = "failures";
 
 export function getMongoDbName(): string {
   return process.env.MONGO_DB?.trim() || DEFAULT_MONGO_DB;
