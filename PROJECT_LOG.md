@@ -28,6 +28,14 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 ## Timeline (newest first)
 
+### Thu 18 Jun 2026 — 13:34 — ReplyChat no longer blanks on order requests
+
+**What happened:** Restored safe fallback payloads for ReplyChat while keeping Band room handoffs as the first path.
+**Problem (if any):** In production, if Band assignment reads failed, Doer/Tool Executor could lose the `place_order` task and the frontend showed a blank assistant bubble.
+**Fix / result:** Doer and Tool Executor can recover from local fallback state, the API returns a visible error reply on failures, and the chat UI no longer renders empty assistant messages.
+
+---
+
 ### Thu 18 Jun 2026 — 12:07 — Dashboard failed-chat JSON response fixed
 
 **What happened:** Hardened the dashboard incident API after Mongo-backed failures caused a frontend JSON parse error.

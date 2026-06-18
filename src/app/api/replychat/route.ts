@@ -415,8 +415,10 @@ export async function POST(request: Request) {
     console.log("\n📝 Step 2: Doer (LangGraph) applying business policies...");
     const doerResult = await runDoer(
       {
+        messages: fullMessages,
         roomId: roomId,
         userId: userId,
+        intent,
       },
       threadId
     );
@@ -464,8 +466,10 @@ export async function POST(request: Request) {
 
       const toolResult = await runToolExecutor(
         {
+          messages: fullMessages,
           roomId: roomId,
           userId: userId,
+          decision,
         },
         threadId
       );
@@ -606,8 +610,12 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("❌ ReplyChat API Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ 
-      error: error instanceof Error ? error.message : "Internal server error" 
+      error: message,
+      reply:
+        "I hit an internal support workflow issue before I could complete that. Please try again or ask for a human teammate.",
     }, { status: 500 });
   }
 }
