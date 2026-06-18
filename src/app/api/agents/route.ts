@@ -82,7 +82,7 @@ async function toolExecutorLogic(toolRequest: ToolRequest) {
 }
 
 function extractOrderId(text: string): string | null {
-  const match = text.match(/ORD[-\s]?[A-Z0-9]+/i);
+  const match = text.match(/\bORD[-\s]?\d[A-Z0-9]*\b/i);
   return match ? match[0] : null;
 }
 

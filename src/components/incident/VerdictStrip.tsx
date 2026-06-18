@@ -1,89 +1,117 @@
 "use client";
 
 import { InvestigationRun } from "@/lib/incidents/types";
+import { hypothesisClassLabel } from "@/lib/cause-room/hypothesis-classes";
 import { Panel } from "@/components/ui/shell";
 
 export function VerdictStrip({
   run,
   roomId,
+  localizationRoomId,
 }: {
   run?: InvestigationRun | null;
   roomId?: string;
+  localizationRoomId?: string;
 }) {
   if (!run || run.status !== "complete") {
     return (
       <Panel className="mt-4 p-4">
         <p className="text-sm text-room-muted">
-          Cross-layer verdict appears here after investigation completes.
+          Cause Finding + Implementation Mechanism appear here after full
+          investigation (~90s).
         </p>
       </Panel>
     );
   }
 
-  const conversation = run.conversationAnalysis?.conversation_verdict;
-  const execution = run.outcomeAnalysis?.execution_verdict;
-  const resolutionMode = run.outcomeAnalysis?.resolution_mode;
-  const handoffReason = run.outcomeAnalysis?.handoff_reason;
-  const handoffDetail = run.outcomeAnalysis?.handoff_detail_en;
-  const gap =
-    conversation === "appears_resolved" && execution === "outcome_failed";
+  const cause = run.causeRoom?.causeFinding;
+  const loc = run.localizationRoom?.localizationFinding;
+
+  if (!cause) {
+    return (
+      <Panel className="mt-4 p-4">
+        <p className="text-sm text-room-muted">Legacy investigation result.</p>
+      </Panel>
+    );
+  }
 
   return (
-    <Panel className="mt-4 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <Panel className="mt-4 space-y-4 p-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-room-muted">
-            Cross-layer assessment
+            Cause Room
           </div>
-          <p className="mt-2 text-sm leading-relaxed">
-            {gap ? (
-              <span className="text-alert">
-                Transcript suggests resolution but execution failed — silent
-                backend failure detected.
-              </span>
-            ) : execution === "outcome_failed" ? (
-              <span className="text-signal">
-                Execution failed while conversation layer shows{" "}
-                {conversation?.replace(/_/g, " ") ?? "mixed signals"}.
-              </span>
-            ) : (
-              <span className="text-trace">
-                Layers appear aligned on this run.
-              </span>
-            )}
+          <p className="mt-1 text-xs font-mono uppercase text-trace">
+            {hypothesisClassLabel(cause.cause_class)}
           </p>
-          {run.contradiction?.detected && run.contradiction.reason ? (
-            <p className="mt-2 text-xs text-alert">{run.contradiction.reason}</p>
-          ) : null}
-          {resolutionMode && handoffReason && handoffReason !== "not_applicable" ? (
-            <p className="mt-2 text-xs text-room-muted">
-              <span className="text-signal">Resolution path:</span>{" "}
-              {resolutionMode.replace(/_/g, " ")} ·{" "}
-              <span
-                className={
-                  handoffReason === "failure_driven_escalation"
-                    ? "text-alert"
-                    : "text-trace"
-                }
-              >
-                {handoffReason.replace(/_/g, " ")}
-              </span>
-              {handoffDetail ? ` — ${handoffDetail}` : null}
-            </p>
-          ) : resolutionMode === "direct_action" ? (
-            <p className="mt-2 text-xs text-room-muted">
-              <span className="text-signal">Resolution path:</span> direct
-              backend action (no colleague handoff)
-            </p>
+          <p className="mt-2 text-sm leading-relaxed">{cause.cause}</p>
+          {(roomId ?? run.roomId) ? (
+            <code className="mt-2 block text-[10px] text-room-muted">
+              Band: {roomId ?? run.roomId}
+            </code>
           ) : null}
         </div>
-        {(roomId ?? run.roomId) ? (
-          <div className="text-right text-xs text-room-muted">
-            <div>Band room</div>
-            <code className="mt-1 block max-w-[280px] truncate font-mono text-[10px] text-trace">
-              {roomId ?? run.roomId}
-            </code>
+
+        {loc ? (
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-room-muted">
+              Implementation Mechanism
+            </div>
+            <p className="mt-1 text-xs font-mono uppercase text-command">
+              {loc.implementation_mechanism.canonical_id}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed">
+              {loc.mechanism_explanation ?? loc.implementation_mechanism.statement}
+            </p>
+            <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-room-muted">
+              Evidence pointer
+            </p>
+            <p className="mt-1 text-sm text-signal">
+              {loc.primary_surface.pointer.native_label}
+            </p>
+            <p className="mt-1 font-mono text-[10px] text-trace">
+              {loc.primary_surface.pointer.native_pointer}
+            </p>
+            {loc.supporting_surfaces?.length ? (
+              <p className="mt-2 text-xs text-room-muted">
+                + {loc.supporting_surfaces.length} supporting surface
+                {loc.supporting_surfaces.length === 1 ? "" : "s"}
+              </p>
+            ) : null}
+            {(localizationRoomId ?? run.localizationRoomId) ? (
+              <code className="mt-2 block text-[10px] text-room-muted">
+                Band: {localizationRoomId ?? run.localizationRoomId}
+              </code>
+            ) : null}
           </div>
+        ) : (
+          <div className="text-sm text-room-muted">
+            Localization Room not run for this investigation.
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        {(roomId ?? run.roomId) ? (
+          <a
+            href={`https://app.band.ai/agent/chats/${roomId ?? run.roomId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-trace underline-offset-2 hover:underline"
+          >
+            Open Cause Room in Band ↗
+          </a>
+        ) : null}
+        {(localizationRoomId ?? run.localizationRoomId) ? (
+          <a
+            href={`https://app.band.ai/agent/chats/${localizationRoomId ?? run.localizationRoomId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-command underline-offset-2 hover:underline"
+          >
+            Open Localization Room in Band ↗
+          </a>
         ) : null}
       </div>
     </Panel>

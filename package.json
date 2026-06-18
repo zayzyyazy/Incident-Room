@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "test:agent": "tsx scripts/test-agent.ts",
-    "test:agent:watch": "nodemon --exec tsx scripts/test-agent.ts"
+    "test:agent:watch": "nodemon --exec tsx scripts/test-agent.ts",
+    "install:browsers": "bash scripts/install-playwright-chromium.sh",
+    "capture-screenshots": "node scripts/capture-demo-media.mjs",
+    "capture-demo": "node scripts/capture-demo-media.mjs",
+    "validate-import-samples": "tsx scripts/validate-import-samples.mts",
+    "validate-briefs": "tsx scripts/validate-investigation-briefs.mts"
   },
   "dependencies": {
     "@band-ai/sdk": "^0.1.6",
@@ -18,6 +23,7 @@
     "langchain": "^1.4.5",
     "mongodb": "^7.3.0",
     "next": "14.2.35",
+    "pdf-lib": "^1.17.1",
     "react": "^18",
     "react-dom": "^18",
     "tree": "^0.1.3",
@@ -30,6 +36,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "nodemon": "^3.1.14",
+    "playwright": "^1.61.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.22.4",

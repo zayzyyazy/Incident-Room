@@ -1,4 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
+import { postBandWorkflowEvent } from "@/lib/band/agent-workflow";
 export const SUPERVISOR_NODE = "supervisor";
 // src/lib/agents/supervisor/nodes.ts
 
@@ -25,6 +26,9 @@ function classifyIntentFromText(text: string) {
   if (/\b(refund|money back|return|chargeback|cancel order)\b/.test(lowered)) {
     return "refund";
   }
+  if (/\b(place|create|make|start|buy|purchase|checkout)\b.*\border\b|\border\b.*\b(place|create|make|start|buy|purchase|checkout)\b/.test(lowered)) {
+    return "place_order";
+  }
   if (/\b(status|tracking|track|delivery|delivered|where is|eta|shipped)\b/.test(lowered)) {
     return "order_status";
   }
@@ -32,6 +36,32 @@ function classifyIntentFromText(text: string) {
     return "product_info";
   }
   return "unknown";
+}
+
+async function writeIntentToBand(
+  state: SupervisorState,
+  intent: string,
+  latestUserMessage: string,
+) {
+  try {
+    await postBandWorkflowEvent(
+      "supervisor",
+      state.roomId,
+      "intent_analysis",
+      {
+        intent,
+        userId: state.userId,
+        latest_message: latestUserMessage,
+        transcript_turns: state.messages.length,
+      },
+      {
+        mentionRole: "doer",
+        metadata: { intent },
+      },
+    );
+  } catch (error) {
+    console.warn("Band supervisor intent handoff failed", error);
+  }
 }
 
 export async function supervisorNode(state: SupervisorState) {
@@ -44,6 +74,7 @@ export async function supervisorNode(state: SupervisorState) {
   if (!process.env.AIMLAPI_KEY && !process.env.BAND_API_KEY) {
     const fallbackIntent = classifyIntentFromText(latestUserMessage);
     console.log(`🎯 Intent fallback: ${fallbackIntent} from conversation`);
+    await writeIntentToBand(state, fallbackIntent, latestUserMessage);
 
     return {
       ...state,
@@ -69,6 +100,7 @@ ${conversationMessages.map((msg) => `${msg.role}: ${msg.content}`).join('\n')}
 Classify the LATEST user message as one of:
 - "order_status": Asking about order status, tracking, delivery
 - "refund": Asking for refund, money back, return, cancellation
+- "place_order": Asking to place, create, buy, purchase, or check out a new order
 - "human_handoff": Asking for a person, manager, escalation, or call back
 - "end_chat": The customer says thanks, bye, done, resolved, or otherwise ends the chat
 - "product_info": Asking about product details, features
@@ -81,6 +113,7 @@ Respond with ONLY the intent keyword.`;
   const validIntents = new Set([
     "order_status",
     "refund",
+    "place_order",
     "human_handoff",
     "end_chat",
     "product_info",
@@ -91,6 +124,7 @@ Respond with ONLY the intent keyword.`;
     : classifyIntentFromText(latestUserMessage);
   
   console.log(`🎯 Intent: ${finalIntent} from conversation`);
+  await writeIntentToBand(state, finalIntent, latestUserMessage);
   
   return {
     ...state,
