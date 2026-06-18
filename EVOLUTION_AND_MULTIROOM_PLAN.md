@@ -1,7 +1,6 @@
 # Incident Room — Evolution + multi-room plan (handoff for Chat)
 
-**For:** Sara (zay) + Chat planner bot  
-**Purpose:** Single source of truth — how the idea evolved since Situation Room, what we’re building now, and what Sara is trying to achieve. Use this to **expand agents**, stress-test collaboration, and refine **two Band rooms** without re-litigating the core insight.
+**Purpose:** Single source of truth — how the idea evolved since Situation Room, what we're building now, and what we're trying to achieve. Use this to **expand agents**, stress-test collaboration, and refine **two Band rooms** without re-litigating the core insight.
 
 **Repo:** https://github.com/zayzyyazy/Incident-Room  
 **Hackathon:** Band of Agents 2026 · Track 1 · Deadline **19 Jun 2026, 3:00 PM UTC**  
@@ -29,9 +28,9 @@ Cause Finding + recurrence enrich + artifacts → ranked `suspect_surfaces` (not
 
 ---
 
-## Part 1 — What Sara is trying to achieve (read this first, Chat)
+## Part 1 — What we're trying to achieve
 
-Sara is **not** trying to build another generic “AI agent evaluator” or a transcript summarizer.
+This is **not** another generic “AI agent evaluator” or a transcript summarizer.
 
 She is building for a **real, growing problem:** companies deploy AI agents on **chat and voice**; when something goes wrong, operators must answer **what kind of failure was it** — API outage, tool not called, wrong tool params, hallucinated success, policy gap, etc. Transcript-only tools miss execution; log-only tools miss what the customer was told.
 

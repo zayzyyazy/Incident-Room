@@ -265,16 +265,16 @@ User then chose to **optimize Option A** because Option B felt “too forced” 
 
 ## 8. Team structure
 
-| Person | Role |
-|--------|------|
-| **Sara (zay)** | Primary builder — Next.js, agents, Band, UI, product |
-| **reprobateboffin** (teammate) | Generator bot — produces `VoiceIncidentEvidence` JSON from raw exports; fake CRM data; may build separate booking chatbot that **feeds JSON into database** (data supplier, not product core) |
+| Role | Scope |
+|------|--------|
+| **Primary builder** | Next.js, agents, Band, UI, product |
+| **Data generator** | `VoiceIncidentEvidence` JSON from raw exports; fake CRM fixtures |
 
 **Division of labor intent:**
-- Sara: investigation product + Band collaboration
-- Friend: normalizer/adapters + fixture factory at volume
+- Primary: investigation product + Band collaboration
+- Generator: normalizer/adapters + fixture factory at volume
 
-**Risk:** Depending on friend’s bot for demo data — need 5–8 fixtures Sara controls regardless.
+**Risk:** Depending on external generator for demo data — keep 5–8 fixtures in-repo regardless.
 
 ---
 

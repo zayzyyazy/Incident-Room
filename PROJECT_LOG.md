@@ -2,9 +2,7 @@
 
 A running diary of this hackathon build. Plain language. Updated as we go.
 
-**Repo:** https://github.com/zayzyyazy/Incident-Room  
-**Team:** Sara (zay) + reprobateboffin (generator bot / fake CRM data)  
-**Product one-liner:** The customer was told it worked. Did it actually work?
+**Repo:** https://github.com/zayzyyazy/Incident-Room
 
 ---
 
@@ -128,7 +126,7 @@ npm run capture-demo
 
 ### Sat 14 Jun 2026 — late night — Fake CRM + Pattern tab live 🔥
 
-**What happened:** Built fake CRM end-to-end. Sara tested Klaus — Pattern tab pulled customer from CRM, OI ran with `crm_context`, investigation COMPLETE.
+**What happened:** Built fake CRM end-to-end. Klaus path tested — Pattern tab pulled customer from CRM, OI ran with `crm_context`, investigation COMPLETE.
 
 **Shipped:**
 - `/crm` dashboard — name, phone, email, birth date, address, VNR last-4
@@ -304,7 +302,7 @@ npm run capture-demo
 
 **Tested:** Pasted JSON in dashboard → evidence tabs looked correct (Conversation T05, Execution 403).
 
-**Teammate thread:** reprobateboffin building generator for more fake transcripts + JSON + fake CRM.
+**Teammate thread:** Generator bot for more fake transcripts + JSON + CRM fixtures.
 
 ---
 
@@ -409,8 +407,8 @@ _Use this section when you step away — coffee, sleep, teammate sync, hackathon
 - [ ] ~~Chat / normalizer / DB platform~~ — cut from pitch and build
 - [ ] CRM: commit + wire for PA, **or** remove Pattern tab
 
-**Teammate (reprobateboffin)**
-- [ ] Optional fixtures; Sara owns Klaus demo path
+**Teammate**
+- [ ] Optional fixtures; hero demo path locked to `retell_call_clinic_44102`
 
 **Already done (keep)**
 - [x] Two-agent pipeline + Band posts

@@ -3,7 +3,7 @@
 **Hero incident:** `retell_call_clinic_44102` (Maria Santos · Retell · reschedule HTTP 503)  
 **Backup:** `PMB-2024-0847` (Klaus · callback never booked)
 
-**Layout:** Cursor/browser **left half** = Incident Room · **right half** = Band room (open link when investigation starts).
+**Layout:** Browser **left half** = Incident Room · **right half** = Band room (open link when investigation starts).
 
 ---
 
