@@ -1,42 +1,40 @@
 # Incident Room — Hackathon Deck
 
-## View online (after deploy)
+## Live link (after deploy)
 
-https://incident-room.vercel.app/presentation/
+| URL | Use |
+|-----|-----|
+| https://incident-room.vercel.app/presentation | Interactive slides (← →) |
+| https://incident-room.vercel.app/presentation?print=1 | **PDF export** (all 12 slides) |
 
-## View locally
+Deploy: push to GitHub → Vercel redeploys automatically.
+
+## PDF — looks good (do this)
+
+1. Open **https://incident-room.vercel.app/presentation?print=1** (or local: `http://localhost:3000/presentation?print=1`)
+2. **Cmd+P** (Mac) / **Ctrl+P** (Windows)
+3. Destination: **Save as PDF**
+4. Layout: **Landscape**
+5. Turn **ON** “Background graphics”
+6. Margins: **None**
+7. Save → send to teammate
+
+## Local only (no deploy)
 
 ```bash
-open docs/presentation/index.html
+npm run dev
+open "http://localhost:3000/presentation"
 ```
 
-Navigate: **← →** or **Space**
+## Send to teammate now
 
-## Export PDF (30 seconds)
-
-1. Open `docs/presentation/index.html` in Chrome
-2. **Cmd+P** → Destination: **Save as PDF**
-3. Layout: **Landscape**
-4. Enable **Background graphics**
-5. Save as `Incident-Room-Deck.pdf`
-
-Or (after `npx playwright install`):
+1. Make PDF from `?print=1` link above → Slack/email/AirDrop
+2. Or share live link after `git push`
 
 ```bash
-npm run presentation:pdf
+git add src/app/presentation public/presentation docs/presentation package.json scripts/export-presentation-pdf.mjs
+git commit -m "Add presentation route and print-optimized PDF mode"
+git push
 ```
 
-Output: `docs/presentation/Incident-Room-Deck.pdf`
-
-## Send to teammate right now
-
-| Method | What to send |
-|--------|----------------|
-| **Fastest** | AirDrop / Slack the PDF from steps above |
-| **Live link** | Push to GitHub → Vercel redeploys → share `/presentation/` URL |
-| **Same Wi‑Fi** | `cd docs/presentation && python3 -m http.server 8765` → `http://YOUR_IP:8765` |
-| **GitHub** | Commit `public/presentation/` + PDF, push, share repo link |
-
-## Speaker notes
-
-See [SPEAKER-NOTES.md](./SPEAKER-NOTES.md) (~6–8 min script).
+Then send: **https://incident-room.vercel.app/presentation**

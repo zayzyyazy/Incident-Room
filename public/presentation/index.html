@@ -387,25 +387,96 @@
       color: var(--muted);
     }
 
+    /* ── Print / PDF mode (?print=1) ── */
+    body.print-mode { overflow: auto !important; height: auto !important; }
+    body.print-mode .deck { height: auto; position: static; }
+    body.print-mode .slide {
+      position: relative;
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+      padding: clamp(2rem, 6vw, 5rem);
+      border-bottom: 1px solid var(--border);
+    }
+    body.print-mode .nav-hint,
+    body.print-mode .progress,
+    body.print-mode .footer-note { display: none !important; }
+
     @media print {
-      html, body { overflow: visible; height: auto; background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      body::before { position: absolute; }
-      .deck { height: auto; position: static; }
+      @page {
+        size: 254mm 190.5mm landscape;
+        margin: 0;
+      }
+      html, body {
+        overflow: visible !important;
+        height: auto !important;
+        background: #07090d !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body::before { position: absolute; inset: 0; }
+      .deck {
+        height: auto !important;
+        position: static !important;
+        width: 100% !important;
+      }
       .slide {
-        position: relative;
+        position: relative !important;
         opacity: 1 !important;
         transform: none !important;
-        pointer-events: auto;
-        min-height: 100vh;
-        page-break-after: always;
-        break-after: page;
+        pointer-events: auto !important;
+        display: flex !important;
+        width: 100% !important;
+        height: 190.5mm !important;
+        min-height: 190.5mm !important;
+        max-height: 190.5mm !important;
+        padding: 14mm 16mm !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        overflow: hidden !important;
+        justify-content: center !important;
       }
-      .slide:last-child { page-break-after: auto; }
-      .nav-hint, .progress, .footer-note { display: none !important; }
+      .slide:last-child { page-break-after: auto !important; }
+      .nav-hint, .progress, .footer-note, .print-banner { display: none !important; }
+      h1 { font-size: 2.75rem !important; max-width: none !important; }
+      h1.gradient {
+        color: #4ecdc4 !important;
+        background: none !important;
+        -webkit-background-clip: unset !important;
+        background-clip: unset !important;
+      }
+      h2 { font-size: 1.85rem !important; max-width: none !important; }
+      .sub { font-size: 1rem !important; margin-bottom: 1.25rem !important; }
+      .quote { font-size: 1.65rem !important; }
+      .grid-2, .split-demo { max-width: none !important; }
+      .links a { border: 1px solid rgba(78, 205, 196, 0.5) !important; }
     }
+
+    .print-banner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: #11141a;
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    body.print-mode .print-banner { display: block; }
+    body.print-mode .print-banner strong { color: var(--trace); }
   </style>
 </head>
 <body>
+  <div class="print-banner">
+    <strong>PDF mode</strong> — Cmd+P / Ctrl+P → Save as PDF · Landscape · Background graphics ON
+  </div>
   <div class="deck" id="deck">
 
     <!-- 1 Title -->
@@ -635,6 +706,10 @@
     });
 
     go(0);
+
+    if (new URLSearchParams(location.search).get("print") === "1") {
+      document.body.classList.add("print-mode");
+    }
   </script>
 </body>
 </html>
