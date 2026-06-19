@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/sync-presentation-deck.mjs && next build",
+    "presentation:sync": "node scripts/sync-presentation-deck.mjs",
     "start": "next start",
     "lint": "next lint",
     "test:agent": "tsx scripts/test-agent.ts",

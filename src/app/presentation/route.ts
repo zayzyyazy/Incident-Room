@@ -1,14 +1,12 @@
-import fs from "node:fs";
-import path from "node:path";
 import { NextResponse } from "next/server";
+import { DECK_HTML } from "./deck-content";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /** Full-screen deck at /presentation (no app shell). */
 export async function GET(request: Request) {
-  const htmlPath = path.join(process.cwd(), "public/presentation/index.html");
-  let html = fs.readFileSync(htmlPath, "utf8");
+  let html = DECK_HTML;
 
   const url = new URL(request.url);
   if (url.searchParams.get("print") === "1") {
