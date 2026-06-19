@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Incident Room — Band of Agents Hackathon</title>
+  <style>
+    :root {
+      --bg: #07090d;
+      --panel: #11141a;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #e8eaed;
+      --muted: #8b929a;
+      --trace: #4ecdc4;
+      --signal: #e8954a;
+      --command: #a78bfa;
+      --alert: #f87171;
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 20% -10%, rgba(78, 205, 196, 0.14), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 100% 100%, rgba(167, 139, 250, 0.1), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .deck {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(2rem, 6vw, 5rem);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid rgba(78, 205, 196, 0.35);
+      background: rgba(78, 205, 196, 0.08);
+      color: var(--trace);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+      width: fit-content;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--trace);
+      box-shadow: 0 0 10px var(--trace);
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 7vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      max-width: 14ch;
+    }
+
+    h1.gradient {
+      background: linear-gradient(135deg, var(--text) 0%, var(--trace) 45%, var(--command) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      max-width: none;
+    }
+
+    h2 {
+      font-size: clamp(1.75rem, 4vw, 2.75rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      max-width: 20ch;
+    }
+
+    .sub {
+      font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+      color: var(--muted);
+      max-width: 42rem;
+      line-height: 1.55;
+      margin-bottom: 2rem;
+    }
+
+    .sub strong { color: var(--text); font-weight: 600; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      max-width: 56rem;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .card-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+    }
+
+    .card.trace { border-color: rgba(78, 205, 196, 0.25); }
+    .card.signal { border-color: rgba(232, 149, 74, 0.3); }
+    .card.command { border-color: rgba(167, 139, 250, 0.25); }
+
+    .card.trace .card-label { color: var(--trace); }
+    .card.signal .card-label { color: var(--signal); }
+    .card.command .card-label { color: var(--command); }
+
+    .card p, .card li {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .card p em, .card li em { color: var(--text); font-style: normal; }
+
+    ul.clean {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-width: 36rem;
+    }
+
+    ul.clean li {
+      padding-left: 1.25rem;
+      position: relative;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.45;
+    }
+
+    ul.clean li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--trace);
+      font-weight: 700;
+    }
+
+    .quote {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 600;
+      line-height: 1.35;
+      max-width: 28ch;
+      color: var(--text);
+    }
+
+    .quote span { color: var(--signal); }
+
+    .split-demo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      max-width: 52rem;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      overflow: hidden;
+      min-height: 220px;
+    }
+
+    .split-demo > div {
+      padding: 1.25rem 1.5rem;
+    }
+
+    .split-demo .left {
+      background: rgba(167, 139, 250, 0.06);
+      border-right: 1px solid var(--border);
+    }
+
+    .split-demo .right {
+      background: rgba(78, 205, 196, 0.06);
+    }
+
+    .split-demo h3 {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .split-demo .left h3 { color: var(--command); }
+    .split-demo .right h3 { color: var(--trace); }
+
+    .crew {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .crew span {
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      padding: 0.25rem 0.55rem;
+      border-radius: 0.35rem;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .crew span.live {
+      border-color: rgba(232, 149, 74, 0.4);
+      color: var(--signal);
+    }
+
+    code, .mono {
+      font-family: var(--mono);
+      font-size: 0.85em;
+      color: var(--trace);
+    }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 40rem;
+    }
+
+    .steps li {
+      counter-increment: step;
+      padding: 0.85rem 1rem 0.85rem 3rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      position: relative;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 0.35rem;
+      background: rgba(78, 205, 196, 0.15);
+      color: var(--trace);
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .links a {
+      color: var(--trace);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(78, 205, 196, 0.35);
+      border-radius: 0.5rem;
+      transition: background 0.2s;
+    }
+
+    .links a:hover { background: rgba(78, 205, 196, 0.1); }
+
+    .footer-note {
+      position: fixed;
+      bottom: 3.5rem;
+      left: clamp(2rem, 6vw, 5rem);
+      font-size: 0.75rem;
+      color: var(--muted);
+      z-index: 10;
+    }
+
+    .nav-hint {
+      position: fixed;
+      bottom: 3.5rem;
+      right: clamp(2rem, 6vw, 5rem);
+      font-size: 0.7rem;
+      color: var(--muted);
+      z-index: 10;
+      letter-spacing: 0.05em;
+    }
+
+    .progress {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      z-index: 20;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--trace), var(--command));
+      transition: width 0.35s ease;
+    }
+
+    .logo-mark {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(78, 205, 196, 0.4);
+      background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(167, 139, 250, 0.12));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-weight: 900;
+      font-size: 1.25rem;
+      color: var(--trace);
+      margin-bottom: 1.5rem;
+      box-shadow: 0 0 40px rgba(78, 205, 196, 0.15);
+    }
+
+    .verdict {
+      font-size: 1.15rem;
+      line-height: 1.6;
+      max-width: 44rem;
+      color: var(--muted);
+    }
+
+    .verdict strong { color: var(--trace); }
+
+    .title-slide-meta {
+      margin-top: 2.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    @media print {
+      html, body { overflow: visible; height: auto; background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body::before { position: absolute; }
+      .deck { height: auto; position: static; }
+      .slide {
+        position: relative;
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto;
+        min-height: 100vh;
+        page-break-after: always;
+        break-after: page;
+      }
+      .slide:last-child { page-break-after: auto; }
+      .nav-hint, .progress, .footer-note { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+
+    <!-- 1 Title -->
+    <section class="slide active" data-slide="1">
+      <div class="logo-mark">IR</div>
+      <div class="badge"><span class="badge-dot"></span> Band of Agents Hackathon</div>
+      <h1 class="gradient">Incident Room</h1>
+      <p class="sub" style="margin-top: 1rem;">
+        Voice AI incidents, contested in public.<br />
+        Specialists recruit on <strong>Band</strong> while you earn the verdict in-app.
+      </p>
+      <p class="title-slide-meta">Production URL · <code>incident-room.vercel.app</code></p>
+    </section>
+
+    <!-- 2 Hook -->
+    <section class="slide" data-slide="2">
+      <div class="badge"><span class="badge-dot"></span> The hook</div>
+      <p class="quote">The customer was told it worked.<br /><span>Did it actually work?</span></p>
+      <p class="sub" style="margin-top: 2rem;">
+        We close the gap between confident agent language and what backend tools really did.
+      </p>
+    </section>
+
+    <!-- 3 Problem -->
+    <section class="slide" data-slide="3">
+      <div class="badge"><span class="badge-dot"></span> Problem</div>
+      <h2>Success theater in voice AI</h2>
+      <ul class="clean">
+        <li>Calls sound resolved — customer hangs up satisfied</li>
+        <li>Tool traces show 503s, no-ops, or silent failures</li>
+        <li>Support teams lack a <em>public audit trail</em> of who knew what</li>
+        <li>No structured way to contest theories across conversation vs execution</li>
+      </ul>
+    </section>
+
+    <!-- 4 Hero -->
+    <section class="slide" data-slide="4">
+      <div class="badge"><span class="badge-dot"></span> Hero incident</div>
+      <h2>Maria Santos · Cal.com 503</h2>
+      <div class="grid-2">
+        <div class="card signal">
+          <div class="card-label">What the customer heard</div>
+          <p><em>"You're rescheduled for Monday at ten AM…"</em> — call ends. Success.</p>
+        </div>
+        <div class="card trace">
+          <div class="card-label">What the backend logged</div>
+          <p><code>reschedule_appointment</code> → <strong style="color:var(--alert)">HTTP 503</strong> — slot not reserved.</p>
+        </div>
+      </div>
+      <p class="sub" style="margin-top: 1.25rem; margin-bottom: 0;">
+        <code>retell_call_clinic_44102</code> · 13-min Retell scheduling call
+      </p>
+    </section>
+
+    <!-- 5 Solution -->
+    <section class="slide" data-slide="5">
+      <div class="badge"><span class="badge-dot"></span> Solution</div>
+      <h2>Investigate in public</h2>
+      <p class="sub">Incident Room turns voice failures into structured evidence, recruits specialists, and streams a live investigation — with Band as the collaboration layer.</p>
+      <div class="grid-2">
+        <div class="card trace">
+          <div class="card-label">In-app</div>
+          <p>Theories panel · Investigation Bay · crew recruits · verdict + PDF report</p>
+        </div>
+        <div class="card command">
+          <div class="card-label">On Band</div>
+          <p>Specialist beats · challenges · fix targets — visible chat audit trail</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 Demo layout -->
+    <section class="slide" data-slide="6">
+      <div class="badge"><span class="badge-dot"></span> Demo layout</div>
+      <h2>Band left · Incident Room right</h2>
+      <div class="split-demo">
+        <div class="left">
+          <h3>Band · live room</h3>
+          <p style="color:var(--muted);font-size:0.9rem;line-height:1.5;">
+            Fresh chat each refresh<br />
+            Normalizer routes evidence<br />
+            Specialists join & post beats<br />
+            Verdict + fix target land here
+          </p>
+        </div>
+        <div class="right">
+          <h3>Incident Room · localhost</h3>
+          <p style="color:var(--muted);font-size:0.9rem;line-height:1.5;">
+            Welcome → Band synced<br />
+            Hero investigation → Theories<br />
+            Run investigation → live SSE<br />
+            Game-style Investigation Bay
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 Agents -->
+    <section class="slide" data-slide="7">
+      <div class="badge"><span class="badge-dot"></span> Multi-agent</div>
+      <h2>Crew recruits one by one</h2>
+      <p class="sub">Evidence access is walled — conversation agents don't see raw tool traces until execution opens them.</p>
+      <div class="crew">
+        <span class="live">Evidence Normalizer</span>
+        <span class="live">Claim Tracer</span>
+        <span class="live">Backend Witness</span>
+        <span>Communication Investigator</span>
+        <span>Execution Investigator</span>
+        <span>Causal Judge</span>
+        <span>Report Synthesizer</span>
+      </div>
+      <ul class="clean" style="margin-top: 1.5rem;">
+        <li>Theories proposed, challenged, withdrawn — not a single LLM monologue</li>
+        <li>Band posts paced for live demo (~520ms between beats)</li>
+      </ul>
+    </section>
+
+    <!-- 8 Flow -->
+    <section class="slide" data-slide="8">
+      <div class="badge"><span class="badge-dot"></span> Investigation flow</div>
+      <h2>Three evidence layers</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-label">Layer 1 · Conversation</div>
+          <p>Transcript, customer belief, premature closure signals</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Layer 2 · Execution</div>
+          <p>Tool calls, HTTP errors, side effects, noop detection</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Layer 3 · Context</div>
+          <p>CRM, chat history, Band room trace, platform metadata</p>
+        </div>
+        <div class="card trace">
+          <div class="card-label">Output</div>
+          <p>Surviving explanation · fix target · PDF incident report</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 Stack -->
+    <section class="slide" data-slide="9">
+      <div class="badge"><span class="badge-dot"></span> Built to ship</div>
+      <h2>Production-ready stack</h2>
+      <ul class="clean">
+        <li><strong style="color:var(--text)">Next.js 14</strong> · SSE investigation stream · Vercel deploy</li>
+        <li><strong style="color:var(--text)">MongoDB</strong> · chats, failures, incidents, CRM — no runtime JSON files</li>
+        <li><strong style="color:var(--text)">Band API</strong> · rooms, agents, visible chat + event fallback</li>
+        <li><strong style="color:var(--text)">Graceful degradation</strong> · local room IDs if Band limit hit</li>
+      </ul>
+    </section>
+
+    <!-- 10 Run it -->
+    <section class="slide" data-slide="10">
+      <div class="badge"><span class="badge-dot"></span> Try it</div>
+      <h2>Run the demo</h2>
+      <ol class="steps">
+        <li><code>npm run dev</code> → open <code>localhost:3000</code></li>
+        <li>Wait for <strong style="color:var(--trace)">Band synced</strong> → Open Band room</li>
+        <li>Launch hero investigation → <strong>Theories</strong> → <strong>Run investigation</strong></li>
+        <li>Screen record split: Band left, Incident Room right</li>
+      </ol>
+    </section>
+
+    <!-- 11 Verdict -->
+    <section class="slide" data-slide="11">
+      <div class="badge"><span class="badge-dot"></span> Outcome</div>
+      <h2>Verdict example</h2>
+      <p class="verdict">
+        <strong>Call failed</strong> — customer was told success while <code>reschedule_appointment</code> broke.<br /><br />
+        <strong>Fix target:</strong> Block success language unless the scheduling tool succeeds.<br /><br />
+        Surviving explanation contested live on Band; verdict earned in Investigation Bay.
+      </p>
+    </section>
+
+    <!-- 12 Thanks -->
+    <section class="slide" data-slide="12">
+      <div class="logo-mark">IR</div>
+      <h1 class="gradient" style="font-size: clamp(2rem, 5vw, 3.5rem);">Thank you</h1>
+      <p class="sub">Voice AI incidents, contested in public.</p>
+      <div class="links">
+        <a href="https://incident-room.vercel.app" target="_blank" rel="noreferrer">incident-room.vercel.app</a>
+        <a href="https://github.com/zayzyyazy/Incident-Room" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://app.band.ai" target="_blank" rel="noreferrer">app.band.ai</a>
+      </div>
+      <p class="sub" style="margin-top: 2rem; font-size: 0.85rem;">Questions?</p>
+    </section>
+
+  </div>
+
+  <div class="footer-note"><span id="counter">1</span> / <span id="total">12</span></div>
+  <div class="nav-hint">← → or Space to navigate</div>
+  <div class="progress"><div class="progress-bar" id="progress"></div></div>
+
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const total = slides.length;
+    let current = 0;
+
+    document.getElementById("total").textContent = total;
+
+    function go(n) {
+      slides[current].classList.remove("active");
+      current = Math.max(0, Math.min(n, total - 1));
+      slides[current].classList.add("active");
+      document.getElementById("counter").textContent = current + 1;
+      document.getElementById("progress").style.width = ((current + 1) / total * 100) + "%";
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+        e.preventDefault();
+        go(current + 1);
+      }
+      if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        go(current - 1);
+      }
+      if (e.key === "Home") go(0);
+      if (e.key === "End") go(total - 1);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (e.clientX > window.innerWidth / 2) go(current + 1);
+      else go(current - 1);
+    });
+
+    go(0);
+  </script>
+</body>
+</html>
