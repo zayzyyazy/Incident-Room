@@ -1,6 +1,6 @@
-// app/api/chat-history/[chatId]/route.ts
 import { NextResponse } from "next/server";
-import getMongoClient from "@/lib/mongodb";
+import { getChatsCollection } from "@/lib/mongodb";
+import { isMongoConfigured } from "@/lib/mongodb/config";
 import { buildChatEvidence, StoredChatMessage } from "@/lib/chat/evidence";
 
 type ChatHistoryDocument = StoredChatMessage & {
@@ -10,23 +10,29 @@ type ChatHistoryDocument = StoredChatMessage & {
   investigationInput?: unknown;
 };
 
-export async function GET(
-  request: Request,
-  { params }: { params: { chatId: string } }
-) {
+type RouteParams = { params: Promise<{ chatId: string }> };
+
+const SINGLE_USER_ID = "user-123";
+
+export async function GET(_request: Request, { params }: RouteParams) {
+  if (!isMongoConfigured()) {
+    return NextResponse.json(
+      { error: "MongoDB is not configured. Set MONGODB_URI in .env.local" },
+      { status: 503 },
+    );
+  }
+
   try {
-    const { chatId } = params;
+    const { chatId } = await params;
 
     if (!chatId) {
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
-    const client = await getMongoClient();
-    const db = client.db("bands_hackathondb");
-    const collection = db.collection("chats");
+    const collection = await getChatsCollection();
 
     const messages = await collection
-      .find({ chatId })
+      .find({ chatId, userId: SINGLE_USER_ID })
       .sort({ timestamp: 1 })
       .toArray();
 
@@ -44,7 +50,7 @@ export async function GET(
     const latestRichMessage = [...typedMessages]
       .reverse()
       .find((message) => message.evidence || message.analyzer || message.incident);
-    const userId = typedMessages.find((message) => message.userId)?.userId ?? "customer_123";
+    const userId = typedMessages.find((message) => message.userId)?.userId ?? SINGLE_USER_ID;
     const evidence =
       latestRichMessage?.evidence ??
       buildChatEvidence(storedMessages, {
@@ -54,49 +60,50 @@ export async function GET(
         analyzer: latestRichMessage?.analyzer,
       });
 
-    return NextResponse.json({ 
-      chat_id: chatId, 
+    return NextResponse.json({
+      chat_id: chatId,
+      user_id: SINGLE_USER_ID,
       messages,
       evidence,
       investigation_input: { evidence },
       latest_analyzer: latestRichMessage?.analyzer ?? null,
       latest_incident: latestRichMessage?.incident ?? null,
     });
-    
   } catch (error) {
     console.error("Error loading chat history:", error);
-    return NextResponse.json({ 
-      error: "Failed to load history" 
+    return NextResponse.json({
+      error: "Failed to load history",
     }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { chatId: string } }
-) {
+export async function DELETE(_request: Request, { params }: RouteParams) {
+  if (!isMongoConfigured()) {
+    return NextResponse.json(
+      { error: "MongoDB is not configured. Set MONGODB_URI in .env.local" },
+      { status: 503 },
+    );
+  }
+
   try {
-    const { chatId } = params;
+    const { chatId } = await params;
 
     if (!chatId) {
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
-    const client = await getMongoClient();
-    const db = client.db("bands_hackathondb");
-    const collection = db.collection("chats");
+    const collection = await getChatsCollection();
 
-    const result = await collection.deleteMany({ chatId });
+    const result = await collection.deleteMany({ chatId, userId: SINGLE_USER_ID });
 
-    return NextResponse.json({ 
-      success: true, 
-      deletedCount: result.deletedCount 
+    return NextResponse.json({
+      success: true,
+      deletedCount: result.deletedCount,
     });
-    
   } catch (error) {
     console.error("Error deleting chat history:", error);
-    return NextResponse.json({ 
-      error: "Failed to delete history" 
+    return NextResponse.json({
+      error: "Failed to delete history",
     }, { status: 500 });
   }
 }

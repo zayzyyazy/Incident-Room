@@ -62,6 +62,45 @@ function normalizeTools(messages: StoredChatMessage[]): StoredToolCall[] {
   });
 }
 
+function toolErrorMessage(tool: StoredToolCall) {
+  if (tool.status !== "error") {
+    return undefined;
+  }
+
+  if (typeof tool.result === "string") {
+    return tool.result;
+  }
+
+  return JSON.stringify(tool.result);
+}
+
+function behavioralHints(messages: StoredChatMessage[]) {
+  const hints = [
+    {
+      type: "chat_session",
+      turn_ref: turnId(messages.length - 1),
+      note: "Evidence was generated from the customer support chat transcript.",
+    },
+  ];
+
+  messages.forEach((message, index) => {
+    const tools = message.toolsCalled ?? message.tools_called ?? [];
+    const hasFailedPlaceOrder = tools.some(
+      (tool) => tool.name === "placeOrder" && tool.status === "error",
+    );
+
+    if (message.role === "assistant" && hasFailedPlaceOrder) {
+      hints.push({
+        type: "premature_closure",
+        turn_ref: turnId(index),
+        note: "Assistant told the customer the order was placed, but the placeOrder tool recorded no backend side effect.",
+      });
+    }
+  });
+
+  return hints;
+}
+
 export function buildChatEvidence(
   messages: StoredChatMessage[],
   options: ChatEvidenceOptions,
@@ -95,13 +134,7 @@ export function buildChatEvidence(
       transcript,
       segments,
       intent: firstIntent,
-      behavioral_hints: [
-        {
-          type: "chat_session",
-          turn_ref: segments.at(-1)?.turn_id ?? "T01",
-          note: "Evidence was generated from the customer support chat transcript.",
-        },
-      ],
+      behavioral_hints: behavioralHints(messages),
     },
     layer2_execution: {
       function_calls: tools.map((tool, index) => ({
@@ -110,10 +143,7 @@ export function buildChatEvidence(
         result: tool.result,
         status: tool.status ?? "success",
         turn_ref: tool.turn_ref ?? segments.at(-1)?.turn_id ?? turnId(index),
-        error_message:
-          tool.status === "error" && typeof tool.result === "string"
-            ? tool.result
-            : undefined,
+        error_message: toolErrorMessage(tool),
       })),
       side_effects: {
         appointment_created: false,

@@ -2,6 +2,11 @@
 // app/api/replychat/route.ts
 import { NextResponse } from "next/server";
 import { createRoom, postMessage, formatBandPost, getRoomHistory } from "@/lib/band/client";
+import {
+  postBandWorkflowEvent,
+  postBandWorkflowAssignment,
+  recruitBandWorkflowAgents,
+} from "@/lib/band/agent-workflow";
 import { runSupervisor } from "@/lib/agents/supervisor/graph";
 import { runDoer } from "@/lib/agents/doer/graph";
 import { runToolExecutor } from "@/lib/agents/tool-executor/graph";
@@ -10,7 +15,18 @@ import {
   StoredChatMessage,
   StoredToolCall,
 } from "@/lib/chat/evidence";
-import { upsertIncidentFromEvidence } from "@/lib/incidents/store";
+import { runTwoAgentInvestigation } from "@/lib/orchestrator/run-two-agent-investigation";
+import {
+  completeInvestigation,
+  failInvestigation,
+  getIncident,
+  startInvestigation,
+  upsertIncidentFromEvidence,
+} from "@/lib/incidents/store";
+import {
+  persistFailedChatEvidence,
+  persistFailureIncidentRecordIfNeeded,
+} from "@/lib/incidents/failures";
 
 type WorkflowTraceEntry = {
   step: string;
@@ -34,6 +50,19 @@ type SupportDecision = {
   params?: Record<string, unknown>;
   response?: string;
   reasoning?: string;
+};
+
+type RegisteredIncident = {
+  id: string;
+  title: string;
+  status: string;
+  persistenceRef?: string | null;
+  investigation?: {
+    status: string;
+    runId: string;
+    roomId?: string;
+    error?: string;
+  };
 };
 
 function nowIso() {
@@ -95,10 +124,21 @@ function appendCurrentUserMessage(
 
 function toolSignals(toolsCalled: StoredToolCall[]) {
   return toolsCalled.flatMap((tool) => {
-    const result = String(tool.result ?? "").toLowerCase();
+    const result = typeof tool.result === "string"
+      ? tool.result.toLowerCase()
+      : JSON.stringify(tool.result ?? {}).toLowerCase();
     const signals: string[] = [];
     if (tool.status === "error") {
       signals.push(`tool_error:${tool.name}`);
+    }
+    if (tool.name === "placeOrder") {
+      signals.push("place_order_workflow");
+      if (tool.status === "error" || result.includes('"orderplaced":false')) {
+        signals.push("place_order_noop");
+      }
+      if (result.includes("customerMessage".toLowerCase())) {
+        signals.push("deceptive_success_reply");
+      }
     }
     if (tool.name === "askRefund" || result.includes("refund")) {
       signals.push("refund_workflow");
@@ -147,6 +187,7 @@ function analyzeEndOfChat(input: {
     input.decision?.tool === "callHumanIntervention" ||
     loweredReply.includes("human teammate has been requested");
   const refundPending = signals.includes("refund_workflow");
+  const placeOrderNoop = signals.includes("place_order_noop");
   const unresolved =
     signals.includes("unresolved_tool_result") ||
     signals.some((signal) => signal.startsWith("tool_error"));
@@ -158,14 +199,16 @@ function analyzeEndOfChat(input: {
     signals.push("workflow_handoff_closed");
   }
 
-  const chatEnded = userEnded || workflowEnded;
+  const chatEnded = userEnded || workflowEnded || placeOrderNoop;
   const shouldInvestigate =
     chatEnded &&
     (unresolved ||
       refundPending ||
+      placeOrderNoop ||
       workflowEnded ||
       input.intent === "refund" ||
-      input.intent === "human_handoff");
+      input.intent === "human_handoff" ||
+      input.intent === "place_order");
 
   return {
     chatEnded,
@@ -173,16 +216,63 @@ function analyzeEndOfChat(input: {
     signals: Array.from(new Set(signals)),
     reason: chatEnded
       ? shouldInvestigate
-        ? "Chat is closed and contains refund, handoff, or unresolved tool signals."
+        ? placeOrderNoop
+          ? "Chat contains a simulated place-order no-op: the assistant confirmed success, but the tool recorded no backend order."
+          : "Chat is closed and contains refund, handoff, or unresolved tool signals."
         : "Chat is closed without investigation-worthy execution signals."
       : "Chat is still active; wait for customer closure or handoff before dashboard registration.",
   };
 }
 
+async function runAutomaticInvestigation(
+  incidentId: string,
+  evidence: ReturnType<typeof buildChatEvidence>,
+) {
+  const run = startInvestigation(incidentId);
+
+  try {
+    const result = await runTwoAgentInvestigation(evidence);
+    const contradiction = {
+      detected:
+        result.outcomeAnalysis.contradicts_msg_id !== null ||
+        (result.conversationAnalysis.conversation_verdict ===
+          "appears_resolved" &&
+          result.outcomeAnalysis.execution_verdict === "outcome_failed"),
+      contradicts_msg_id: result.outcomeAnalysis.contradicts_msg_id,
+      reason: result.outcomeAnalysis.contradiction_reason_en,
+    };
+
+    const completed = completeInvestigation(incidentId, run.id, {
+      pipeline: "legacy",
+      roomId: result.roomId,
+      bandMessageIds: result.bandMessageIds,
+      conversationAnalysis: result.conversationAnalysis,
+      outcomeAnalysis: result.outcomeAnalysis,
+      contradiction,
+    });
+    await persistFailureIncidentRecordIfNeeded(getIncident(incidentId));
+
+    return {
+      status: completed.status,
+      runId: completed.id,
+      roomId: completed.roomId,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Investigation failed";
+    const failed = failInvestigation(incidentId, run.id, message);
+    await persistFailureIncidentRecordIfNeeded(getIncident(incidentId));
+    return {
+      status: failed.status,
+      runId: failed.id,
+      error: message,
+    };
+  }
+}
+
 // ========== MAIN HANDLER ==========
 export async function POST(request: Request) {
   try {
-    const { chatId, message, conversationHistory, userId = "customer_123" } = await request.json();
+    const { chatId, message, conversationHistory, userId = "user-123" } = await request.json();
 
     if (!message || !chatId) {
       return NextResponse.json({ error: "chatId and message are required" }, { status: 400 });
@@ -225,6 +315,8 @@ export async function POST(request: Request) {
     const room = await createRoom();
     const roomId = room.id;
     console.log(`🏠 Room ID: ${roomId}`);
+    const recruitment = await recruitBandWorkflowAgents(roomId);
+    console.log(`🤝 Band remote agents: ${JSON.stringify(recruitment)}`);
 
     const threadId = crypto.randomUUID();
 
@@ -241,11 +333,35 @@ export async function POST(request: Request) {
       transcript_turns: fullMessages.length,
     });
 
+    await postAgentStep(roomId, "00", "System", "band_remote_agents_recruited", {
+      agents: recruitment,
+      protocol:
+        "Configured Band remote agents are added as room participants and receive directed @mentions for each handoff.",
+    });
+
     await postAgentStep(roomId, "01", "System", "supervisor_assignment", {
       instruction:
         "Supervisor, classify the latest customer intent using the chat transcript posted to this Band room.",
       latest_message: message,
     });
+    try {
+      await postBandWorkflowAssignment(
+        roomId,
+        "supervisor",
+        "supervisor_assignment",
+        {
+          instruction:
+            "Classify the latest customer intent using the chat transcript posted to this Band room, then hand the intent to Doer in Band.",
+          latest_message: message,
+          chatId,
+          userId,
+          transcript_turns: fullMessages.length,
+        },
+        { chatId, userId },
+      );
+    } catch (error) {
+      console.warn("Band supervisor assignment mention failed", error);
+    }
 
     // Step 1: Supervisor with FULL history
     const supervisorResult = await runSupervisor(
@@ -268,12 +384,32 @@ export async function POST(request: Request) {
 
     const historyAfterSupervisor = await getRoomHistory(roomId);
 
-    await postAgentStep(roomId, "02", "Supervisor", "handoff_to_doer", {
+    const doerHandoffPayload = {
       instruction:
         "Doer, use the Supervisor intent and Band room context to choose either a direct answer or a tool request.",
       intent,
+      messages: fullMessages,
+      latest_message: message,
+      chatId,
+      userId,
       band_history_count: historyAfterSupervisor.length,
-    }, { intent });
+    };
+
+    await postAgentStep(roomId, "02", "Supervisor", "handoff_to_doer", doerHandoffPayload, { intent });
+    try {
+      await postBandWorkflowEvent(
+        "supervisor",
+        roomId,
+        "handoff_to_doer",
+        doerHandoffPayload,
+        {
+          mentionRole: "doer",
+          metadata: { intent, chatId, userId },
+        },
+      );
+    } catch (error) {
+      console.warn("Band supervisor-to-doer handoff failed", error);
+    }
 
     // Step 2: Doer applies policies using LangGraph
     console.log("\n📝 Step 2: Doer (LangGraph) applying business policies...");
@@ -282,7 +418,7 @@ export async function POST(request: Request) {
         messages: fullMessages,
         roomId: roomId,
         userId: userId,
-        intent: intent,
+        intent,
       },
       threadId
     );
@@ -301,19 +437,39 @@ export async function POST(request: Request) {
 
     if (decision?.action === "call_tool") {
       console.log(`\n📝 Step 3: ToolExecutor (LangGraph) running ${decision.tool}...`);
-      await postAgentStep(roomId, "03", "Doer", "tool_executor_assignment", {
+      const toolExecutorAssignment = {
         instruction:
           "Tool Executor, run the requested live support tool and post the result back to Band before the assistant responds.",
+        decision,
         tool: decision.tool,
         params: decision.params,
-      }, { intent, tool: decision.tool });
+        intent,
+        chatId,
+        userId,
+      };
+
+      await postAgentStep(roomId, "03", "Doer", "tool_executor_assignment", toolExecutorAssignment, { intent, tool: decision.tool });
+      try {
+        await postBandWorkflowEvent(
+          "doer",
+          roomId,
+          "tool_executor_assignment",
+          toolExecutorAssignment,
+          {
+            mentionRole: "tool_executor",
+            metadata: { intent, tool: decision.tool, chatId, userId },
+          },
+        );
+      } catch (error) {
+        console.warn("Band doer-to-tool-executor assignment failed", error);
+      }
 
       const toolResult = await runToolExecutor(
         {
           messages: fullMessages,
           roomId: roomId,
           userId: userId,
-          decision: decision,
+          decision,
         },
         threadId
       );
@@ -384,17 +540,26 @@ export async function POST(request: Request) {
       userId,
       roomId,
       analyzer,
-      title: `Support chat ${chatId}: ${intent}`,
+      title: analyzer.shouldInvestigate
+        ? `Failed chat ${chatId}: ${intent}`
+        : `Support chat ${chatId}: ${intent}`,
     });
 
-    let incident: { id: string; title: string; status: string } | null = null;
+    let incident: RegisteredIncident | null = null;
     if (analyzer.chatEnded && analyzer.shouldInvestigate) {
+      const persistenceRef = await persistFailedChatEvidence(evidence);
       const record = upsertIncidentFromEvidence(evidence);
       incident = {
         id: record.id,
         title: record.evidence.title,
         status: record.status,
+        persistenceRef,
       };
+
+      if (analyzer.signals.includes("place_order_noop")) {
+        incident.investigation = await runAutomaticInvestigation(record.id, evidence);
+        incident.status = incident.investigation.status;
+      }
     }
 
     await postAgentStep(roomId, "05", "EndAnalyzer", "analysis_result", {
@@ -445,8 +610,12 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("❌ ReplyChat API Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ 
-      error: error instanceof Error ? error.message : "Internal server error" 
+      error: message,
+      reply:
+        "I hit an internal support workflow issue before I could complete that. Please try again or ask for a human teammate.",
     }, { status: 500 });
   }
 }

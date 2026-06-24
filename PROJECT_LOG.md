@@ -2,24 +2,262 @@
 
 A running diary of this hackathon build. Plain language. Updated as we go.
 
-**Repo:** https://github.com/zayzyyazy/Incident-Room  
-**Team:** Sara (zay) + reprobateboffin (generator bot / fake CRM data)  
-**Product one-liner:** Find where a voice AI call *actually* failed — not just what it sounded like.
+**Repo:** https://github.com/zayzyyazy/Incident-Room
 
 ---
 
 ## Where we are right now
 
-**Status (as of Mon 15 Jun 2026, 18:39 UTC):** Phase 0–1 demo is still working, and reply chat now routes agent handoffs through Band, records tool calls/history, and can turn ended support chats into dashboard incidents.
+**Status (Thu 18 Jun 2026):** **Main branch build fixed + demo-ready** — conflict-resolution cleanup is done, lint/build pass, failed ReplyChat incidents persist in MongoDB, and captured demo assets remain in `docs/screenshots/`. Hero: `retell_call_clinic_44102`.
 
-**Demo that works today:**
-- **Klaus** — direct action, scheduling 504, `path: direct action`
-- **Maria** — direct action, CRM 403, contradiction + Band link
-- **Anissa** (real Leaping) — handoff after birthday fail, `failure driven escalation`
+**Recording:** [docs/DEMO_RECORDING.md](./docs/DEMO_RECORDING.md) (manual screen record) · automated assets via `npm run capture-demo`
+
+**Locked architecture (read `PRODUCT.md`):**
+- **Room 1 — Cause Room:** What happened? → Cause Finding + evolution + recurrence hint
+- **Room 2 — Localization Room (planned):** Where in stack? → suspect surfaces (not auto-fix)
+- **Recurrence:** orchestrator handoff field, not a third room
+
+**What runs today:**
+- **`POST /api/dev/investigate-cause-room`** — 9 Band posts, Klaus fixture default
+- **`POST /api/dev/investigate-two`** — legacy 2-agent pipeline
+- Fixtures: Klaus, Maria, Anissa + fake CRM
+
+**Next:** Run Cause Room on all fixtures, then UI feed showing opinion evolution across challenge rounds.
 
 ---
 
 ## Timeline (newest first)
+
+### Thu 18 Jun 2026 — 16:11 — Production runtime hardening
+
+**What happened:** Removed local runtime dependencies from the production branch.
+**Problem (if any):** Serverless deploys cannot rely on `.data` writes, localhost debug ingest calls, or Band being available for every request.
+**Fix / result:** Imported/runtime incidents and CRM edits use Mongo when configured, Band room creation falls back to local rooms on API/env failures, localhost debug calls were removed, and lint/build pass.
+
+---
+
+### Thu 18 Jun 2026 — 13:50 — Mixed-language order requests fixed
+
+**What happened:** ReplyChat now recognizes rough German/English order requests like "stelle eine order bitteeee".
+**Problem (if any):** Those messages could miss `place_order` classification or fail while persisting the incident, causing a generic workflow-error reply instead of the intended fake order confirmation.
+**Fix / result:** Broadened order intent detection, made failure persistence non-fatal, aligned chat history DB selection, and verified the fake placed-order reply plus failed tool trace still work without Band.
+
+---
+
+### Thu 18 Jun 2026 — 13:34 — ReplyChat no longer blanks on order requests
+
+**What happened:** Restored safe fallback payloads for ReplyChat while keeping Band room handoffs as the first path.
+**Problem (if any):** In production, if Band assignment reads failed, Doer/Tool Executor could lose the `place_order` task and the frontend showed a blank assistant bubble.
+**Fix / result:** Doer and Tool Executor can recover from local fallback state, the API returns a visible error reply on failures, and the chat UI no longer renders empty assistant messages.
+
+---
+
+### Thu 18 Jun 2026 — 12:07 — Dashboard failed-chat JSON response fixed
+
+**What happened:** Hardened the dashboard incident API after Mongo-backed failures caused a frontend JSON parse error.
+**Problem (if any):** A malformed or older failure document could break `/api/incidents`, leaving the dashboard to parse an empty/non-JSON response.
+**Fix / result:** Failure records are now parsed defensively, malformed records are skipped, `/api/incidents` always returns JSON, and the dashboard logs API errors instead of crashing.
+
+---
+
+### Thu 18 Jun 2026 — 12:01 — Failed chats moved to MongoDB
+
+**What happened:** Failed ReplyChat incidents now persist in a Mongo `failures` collection instead of root JSON files.
+**Problem (if any):** Root `failed-chat-*.json` files were not reliable in production/serverless environments.
+**Fix / result:** Added Mongo-backed failure storage, merged those failures into dashboard incident APIs, and removed committed failed-chat JSON artifacts.
+
+---
+
+### Thu 18 Jun 2026 — 09:23 — Failed chats show on dashboard
+
+**What happened:** Failed ReplyChat JSON files now appear in the incident list.
+**Problem (if any):** The app already wrote `failed-chat-*.json`, but the dashboard filter hid those records unless they were demo submissions or imports.
+**Fix / result:** Added a failed-chat incident detector so root failed-chat evidence loads into the dashboard and can be opened for investigation.
+
+---
+
+### Thu 18 Jun 2026 — 08:58 — Main branch build fixed
+
+**What happened:** Cleaned up broken conflict-resolution leftovers on main.
+**Problem (if any):** Build/lint failed because of stale helper signatures, unused merge leftovers, missing `pdf-lib`, and a few TypeScript target/type mismatches.
+**Fix / result:** Restored the current Band client call shape, removed unused bindings, added the existing PDF dependency, fixed iterator compatibility, and verified lint/build pass.
+
+---
+
+### Tue 17 Jun 2026 — README media + capture pipeline
+
+**Shipped:**
+- **`npm run capture-demo`** — Playwright script for 12 cropped README screenshots + `incident-room-demo.webm` walkthrough (`retell_call_clinic_44102`)
+- **`npm run install:browsers`** — uses official `playwright install chromium` into `.playwright-browsers/`
+- **Desk** — `retell_call_clinic_44102` added to demo submission list (shows on Operations Desk)
+- **README** — screenshot gallery synced to capture output filenames; video path documented
+- **Fixture** — `fixtures/seeded/test-retell-clinic-44102.json` for auto-seed on empty store
+
+**Run locally (agent env can't launch Chromium):**
+```bash
+npm run install:browsers && npm run dev
+npm run capture-demo
+```
+
+**Captured (17 Jun):** all 12 PNGs + `incident-room-demo.webm` in `docs/screenshots/`.
+
+---
+
+### Mon 16 Jun 2026 — Demo finalization (earned investigation bay)
+
+**Shipped:**
+- **Investigation Bay** — crew bar only shows **recruited** agents (lights up on join); stage slots per crewmate; theory strip + dialogue dock (balanced text)
+- **Call outcome** framing in live UI + PDF (`CALL OUTCOME`, not NOT JUSTIFIED headline)
+- **CRM** — 13 seed customers + `/api/crm/reseed` + Reload button
+- **Agents tab** — visual party grid (crewmates)
+- **Fix:** `getAgentDefinition` runtime error in live theater
+- **Docs:** `docs/DEMO_RECORDING.md`, README + desk hero incident hint
+
+**Hero demo path:** Desk → `retell_call_clinic_44102` → Theories (half screen) + Band (half screen) → Reports PDF
+
+---
+
+### Sun 15 Jun 2026 — Localhost + Band UX + cross-room lock
+
+**Shipped:**
+- **localhost Investigate** → Cause Room (9 posts, evolution in UI)
+- **Band room titles:** `{incident_id} · {title}` (no more "New Session")
+- **Band posts:** human-readable English prose (JSON kept in metadata)
+- **Architecture lock:** Cause Finding v1 → Localization; optional **Cause Revision Request** (HOLD/REVISE) — not for Klaus unless artifacts support it
+
+**Try it:** `npm run dev` → http://localhost:3000 → Klaus → **Run Cause Room**
+
+---
+
+### Sun 15 Jun 2026 — Cause Room shipped in code 🔥
+
+**Decision:** Lock **Cause Room → Localization Room** two-room model. Room 1 agents renamed and rebuilt:
+
+| Agent | Domain | Belief |
+|-------|--------|--------|
+| **Claim Tracer** | Conversation only | Customer harm starts with what agent caused customer to believe |
+| **Backend Witness** | Execution only | Tool/API/state is ground truth |
+| **Causal Judge** | Bridge | Neither domain alone explains incident; introduces bridge hypotheses |
+
+**Collaboration rules locked:**
+- Hard evidence walls enforced in orchestrator context filters
+- **2 challenge rounds** — CT + BW CHALLENGE / SUPPORT / YIELD with `opinion_changed`
+- Final cause must differ from all opening hypotheses
+- Cause Finding includes `evolution[]` + `recurrence_hint_request`
+
+**Shipped in repo:**
+- `src/lib/cause-room/` — types, prompts, agents, context filters
+- `src/lib/orchestrator/run-cause-room-investigation.ts` — 9-post Band sequence
+- `src/app/api/dev/investigate-cause-room/route.ts`
+- Updated: `PRODUCT.md`, `SPRINT_PLAN.md`, agent registry
+
+**Klaus expected arc:** hallucinated success vs API failure → **premature confirmation after failed scheduling API**
+
+**Not built yet:** Localization Room, UI evolution feed, main dashboard wired to Cause Room
+
+---
+
+### Sun 15 Jun 2026 — Product pivot: belief evolution / success overturn (superseded by Cause Room lock)
+
+**Decision:** Stop optimizing audit-chain architecture on paper. **Do not pivot domain** (said vs did is the insight). **Pivot mechanic + story:**
+
+| Old | New |
+|-----|-----|
+| "Where did the call fail?" (headline) | "Customer told it worked — did it?" |
+| CA → OI → FS pipeline | CA → OI → PA → **CA revises** → Recorder |
+| Collaboration = Band fetch / FALSIFIED badge | Collaboration = **CA changes its mind** in Band |
+| Failure Synthesizer summarizes | **Recorder:** success overturned + fix owner |
+
+**Why:** Competitor review (Decision Desk, SafeHands, AEGIS, etc.) — judges remember **decisions and belief change**, not "multiple agents analyzed a call." SafeHands owns one-shot contradiction; we need **CA pass 2** + overturn banner (Video B).
+
+**Judge retell test:** "AI marked success; execution proved callback never booked; pattern showed repeats; analyst withdrew success."
+
+**Banned until Klaus runs:** new architecture docs, cross-platform, chat-agent platform pitch.
+
+**Updated:** `PRODUCT.md`, `PROJECT_LOG.md`, `README.md`, `PROJECT_EVOLUTION_LOG.md`, `SPRINT_PLAN.md`
+
+**Later same day — multi-room direction:** See **[EVOLUTION_AND_MULTIROOM_PLAN.md](./EVOLUTION_AND_MULTIROOM_PLAN.md)** — Room 1 Call Analyzer (CA+OI+Grounding Critic) → handoff packet → Room 2 Mistake Evaluator (3 advocates + convergence). Handoff doc for Chat to expand agents.
+
+---
+
+### Sat 14 Jun 2026 — late night — Fake CRM + Pattern tab live 🔥
+
+**What happened:** Built fake CRM end-to-end. Klaus path tested — Pattern tab pulled customer from CRM, OI ran with `crm_context`, investigation COMPLETE.
+
+**Shipped:**
+- `/crm` dashboard — name, phone, email, birth date, address, VNR last-4
+- Lookup by phone / customer_id / email / VNR from call evidence
+- Pattern · L3 tab shows matched customer (Klaus demo: prior calls, open ticket, address)
+- OI gets CRM context on investigate (birth date vs `check_birthday` cases)
+- Seed data: Klaus, Maria, Anissa in `fixtures/crm/customers.json`
+
+**Klaus re-test (`PMB-2024-0847`):**
+- Pattern tab: **Klaus Müller** matched on `customer_id`
+- CA appears resolved + OI outcome failed + cross-layer silent backend failure
+- "Third scheduling failure in two weeks" visible from CRM notes field
+
+**Ops note:** Multiple `next dev` processes broke localhost (404 on pages, API still 200). Fix: `pkill -f "next dev"`, `rm -rf .next`, one `npm run dev`.
+
+**TODO soon:** Remove "notes" from CRM UI — notes should be customer profile only, not call summaries (currently seed data mixes both).
+
+**Next tonight/tomorrow:** Failure Synthesizer v1, then push CRM code to GitHub for friend.
+
+---
+### Tue 16 Jun 2026 — 20:25 — Direct handoff payloads removed
+
+**What happened:** Removed meaningful `intent`, transcript, and `decision` data from the route calls into Doer and Tool Executor.
+**Problem (if any):** Even after Band-first reads, the route still passed enough direct state for the agents to work without reading the Band handoff.
+**Fix / result:** `runDoer` now receives only room/user scaffolding and `runToolExecutor` receives no decision; their actual task inputs come from `handoff_to_doer` and `tool_executor_assignment` in the Band room.
+
+---
+
+### Tue 16 Jun 2026 — 20:18 — Band room handoffs are primary inputs
+
+**What happened:** Strengthened ReplyChat’s Band-of-agents workflow so Doer and Tool Executor read complete room handoff payloads before using direct state.
+**Problem (if any):** The previous flow posted handoffs to Band, but direct LangGraph inputs still carried enough data to look like Band was only an audit log.
+**Fix / result:** Supervisor now posts a full `handoff_to_doer` payload into Band, Doer reads it first, Doer posts `tool_executor_assignment`, and Tool Executor reads that first before running tools.
+
+---
+
+### Tue 16 Jun 2026 — 19:57 — Chat sidebar scoped to user-123
+
+**What happened:** Scoped the ReplyChat sidebar and chat history APIs to the single app user `user-123`.
+**Problem (if any):** The sidebar listed stored chats without a fixed user filter, while this demo app is meant to behave as one user.
+**Fix / result:** Chat storage now saves as `user-123`, history list/load/delete filter by that user, and the support tools still map `user-123` to the demo fixture customer for order/refund lookups.
+
+---
+
+### Tue 16 Jun 2026 — 19:51 — Previous chats sidebar
+
+**What happened:** Added a previous-chats sidebar to ReplyChat.
+**Problem (if any):** Chat messages were stored in Mongo, but there was no UI to browse old chat sessions.
+**Fix / result:** Added `/api/chat-history` to list stored chat summaries and rebuilt `/chat/[chatId]` with a sidebar for opening previous chats or starting a new one.
+
+---
+
+### Tue 16 Jun 2026 — 17:47 — Failed chats persist as dashboard JSON
+
+**What happened:** Failed ReplyChat sessions now write a full incident evidence JSON file at the repo root.
+**Problem (if any):** Failed chats were registered in memory, but they were not durable JSON inputs like the other incident review examples.
+**Fix / result:** Added root `failed-chat-*.json` persistence, made the incident store load those files, and verified a saved failed chat appears in the dashboard incident list format.
+
+---
+
+### Tue 16 Jun 2026 — 17:39 — Faulty place-order demo path
+
+**What happened:** Added a new `place_order` intent and a `placeOrder` tool for ReplyChat.
+**Problem (if any):** We needed a clean way to use our own chat agent transcript as incident evidence, with a backend failure that the customer cannot see.
+**Fix / result:** `placeOrder` now tells the customer the order was placed while recording `orderPlaced: false`, `sideEffectCreated: false`, and `status: error`; the chat becomes incident evidence automatically and starts the two-agent investigation best-effort.
+
+---
+
+### Tue 16 Jun 2026 — 17:13 — Reply chat uses Band remote-agent handoffs
+
+**What happened:** Added the configured Supervisor, Doer, and Tool Executor Band remote agents to each reply chat room and sent their assignments/handoffs as Band messages/events.
+**Problem (if any):** The app was posting workflow traces to Band, but the LangGraph agents still mostly shared state directly instead of reading the handoff from the Band room.
+**Fix / result:** Added Band role config from `.env`, room participant recruitment, per-agent API key posting, Band room payload parsing, and kept local execution as the safe fallback so chat behavior stays the same.
+
+---
 
 ### Mon 15 Jun 2026 — 18:39 — Reply chat now feeds investigations
 
@@ -120,7 +358,7 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 
 **Tested:** Pasted JSON in dashboard → evidence tabs looked correct (Conversation T05, Execution 403).
 
-**Teammate thread:** reprobateboffin building generator for more fake transcripts + JSON + fake CRM.
+**Teammate thread:** Generator bot for more fake transcripts + JSON + CRM fixtures.
 
 ---
 
@@ -186,6 +424,8 @@ A running diary of this hackathon build. Plain language. Updated as we go.
 - [x] Maria second scenario working after store fix
 - [x] Anissa real Leaping case — failure-driven handoff taxonomy in UI
 - [x] Handoff vs direct action distinction (capability vs failure-driven)
+- [x] Fake CRM dashboard + lookup wired to Pattern tab + OI context
+- [x] Klaus CRM match demo (prior calls + open ticket in Pattern tab)
 - [x] Three demo archetypes: Klaus, Maria, Anissa
 - [x] Reply chat can create investigation-ready evidence and dashboard incidents
 - [x] Clear product lock in `PRODUCT.md`
@@ -206,26 +446,30 @@ _Use this section when you step away — coffee, sleep, teammate sync, hackathon
 
 ## What's next (backlog)
 
-**Phase 2 — more agents**
-- [ ] Pattern Analyst (prior calls, recurrence) — wire `fixtures/crm/customers.json`
-- [ ] Failure Synthesizer — Band-only root cause + fix surface
+**Sprint — belief evolution (priority order)**
+- [ ] Schemas: interpretation, execution_audit, pattern_assessment, ca_revision, success_verdict
+- [ ] Rename `run-two-agent-investigation.ts` → `run-investigation.ts`
+- [ ] OI reads CA from Band (`getRoomHistory`) — remove in-memory CA handoff
+- [ ] PA posts recurrence (reads CA + OI from Band); CRM as PA input only
+- [ ] **CA pass 2** — withdraw success; reads OI + PA from Band
+- [ ] **Recorder** — SUCCESS OVERTURNED + engineering owner + cites MSG IDs
+- [ ] Klaus guardrails: `enforceKlausAssertions` + `finalizeExecutionAudit` (504)
+- [ ] UI P1: **SUCCESS CLASSIFICATION OVERTURNED** banner + CA pass 1 vs 2 visible
+- [ ] Pre-seed Klaus; Vercel deploy; **90s video** (UI + band.ai room)
 
-**Phase 3**
-- [ ] Clarification loops (OI → CA, max 2 re-runs)
+**Cut / defer**
+- [ ] ~~Clarification loops~~ — cut
+- [ ] ~~SSE~~ — cut unless sprint ahead
+- [ ] ~~Chat / normalizer / DB platform~~ — cut from pitch and build
+- [ ] CRM: commit + wire for PA, **or** remove Pattern tab
 
-**Demo polish**
-- [x] Tune Maria: CA → `appears_resolved` when agent confirms address at T05
-- [x] Stronger `contradiction.detected` for L1/L2 mismatch
-- [ ] Pre-seed Maria + Klaus on home page (no import step for judges)
+**Teammate**
+- [ ] Optional fixtures; hero demo path locked to `retell_call_clinic_44102`
 
-**Teammate (reprobateboffin)**
-- [ ] Generator: 3–5 failure archetypes matching `VoiceIncidentEvidence` schema
-- [ ] CRM rows keyed by phone / customer id
-- [ ] Failure types: silent_backend_failure, parameter_drift, noop_confirmation, etc.
-
-**Later / nice-to-have**
-- [ ] Persist investigations to disk (not just evidence fixtures)
-- [ ] SSE live feed, Vercel deploy
+**Already done (keep)**
+- [x] Two-agent pipeline + Band posts
+- [x] Klaus / Maria / Anissa fixtures + handoff taxonomy
+- [x] Contradiction + CRM (local)
 
 ---
 

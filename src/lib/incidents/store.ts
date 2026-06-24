@@ -1,13 +1,31 @@
 import fs from "node:fs";
 import path from "node:path";
-import { VoiceIncidentEvidenceSchema } from "@/lib/evidence/types";
+import {
+  VoiceIncidentEvidenceSchema,
+} from "@/lib/evidence/types";
+import { isDemoSubmissionIncident } from "@/lib/demo/submission-incidents";
+import { isFailedChatEvidence } from "@/lib/incidents/failures";
+import { isImportedEvidence } from "@/lib/incidents/imported";
 import {
   IncidentRecord,
   IncidentSummary,
   InvestigationRun,
 } from "@/lib/incidents/types";
-
 const incidents = new Map<string, IncidentRecord>();
+
+function mergeMissingIncidentsFromDisk() {
+  for (const fixturePath of fixturePathsOnDisk()) {
+    try {
+      const evidence = loadFixtureFile(fixturePath);
+      if (!incidents.has(evidence.incident_id)) {
+        upsertFromEvidenceFile(fixturePath);
+      }
+    } catch {
+      // skip invalid fixture files
+    }
+  }
+
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -22,6 +40,7 @@ function fixturePathsOnDisk(): string[] {
   const roots = [
     path.join(process.cwd(), "fixtures"),
     path.join(process.cwd(), "fixtures", "seeded"),
+    path.join(process.cwd(), "fixtures", "incidents"),
   ];
 
   const paths: string[] = [];
@@ -35,6 +54,7 @@ function fixturePathsOnDisk(): string[] {
       }
     }
   }
+
   return paths;
 }
 
@@ -95,8 +115,16 @@ function loadIncidentFromDisk(id: string): IncidentRecord | undefined {
 
 export function listIncidents(): IncidentSummary[] {
   seedIfEmpty();
+  mergeMissingIncidentsFromDisk();
+  seedFromDisk();
 
   return Array.from(incidents.values())
+    .filter(
+      (incident) =>
+        isDemoSubmissionIncident(incident.id) ||
+        isImportedEvidence(incident.evidence) ||
+        isFailedChatEvidence(incident.evidence),
+    )
     .map((incident) => {
       const last = incident.investigations.at(-1);
       return {
@@ -108,6 +136,8 @@ export function listIncidents(): IncidentSummary[] {
         investigationCount: incident.investigations.length,
         lastVerdict: last?.conversationAnalysis?.conversation_verdict,
         lastExecutionVerdict: last?.outcomeAnalysis?.execution_verdict,
+        lastCause: last?.causeRoom?.causeFinding.cause,
+        lastCauseClass: last?.causeRoom?.causeFinding.cause_class,
         lastRoomId: incident.lastRoomId ?? last?.roomId,
       };
     })
@@ -119,11 +149,20 @@ export function listIncidents(): IncidentSummary[] {
 
 export function getIncident(id: string): IncidentRecord | undefined {
   seedIfEmpty();
+  mergeMissingIncidentsFromDisk();
+
+  seedFromDisk();
   const cached = incidents.get(id);
   if (cached) {
     return cached;
   }
+
   return loadIncidentFromDisk(id);
+}
+
+export function cacheIncidentRecord(record: IncidentRecord): IncidentRecord {
+  incidents.set(record.id, record);
+  return record;
 }
 
 export function upsertIncidentFromEvidence(
@@ -167,6 +206,7 @@ export function startInvestigation(incidentId: string): InvestigationRun {
     id: `run-${Date.now()}`,
     startedAt: nowIso(),
     status: "running",
+    pipeline: "full",
   };
 
   incident.investigations.push(run);
@@ -202,6 +242,12 @@ export function completeInvestigation(
   incident.investigations[index] = completed;
   incident.status = "complete";
   incident.lastRoomId = completed.roomId;
+  if (completed.crmLink) {
+    incident.crmLink = completed.crmLink;
+  }
+  if (completed.crmLookup) {
+    incident.lastCrmLookup = completed.crmLookup;
+  }
   incident.updatedAt = nowIso();
   incidents.set(incidentId, incident);
 

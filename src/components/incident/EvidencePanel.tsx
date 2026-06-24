@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import { VoiceIncidentEvidence } from "@/lib/evidence/types";
+import { IncidentCrmLink, CrmLookupResult } from "@/lib/crm/types";
 import { Panel } from "@/components/ui/shell";
 
 type Tab = "transcript" | "execution" | "customer";
 
-export function EvidencePanel({ evidence }: { evidence: VoiceIncidentEvidence }) {
+export function EvidencePanel({
+  evidence,
+  crmLink,
+  crmLookup,
+}: {
+  evidence: VoiceIncidentEvidence;
+  crmLink?: IncidentCrmLink | null;
+  crmLookup?: CrmLookupResult | null;
+}) {
   const [tab, setTab] = useState<Tab>("transcript");
 
   const tabs: { id: Tab; label: string }[] = [
@@ -18,7 +27,7 @@ export function EvidencePanel({ evidence }: { evidence: VoiceIncidentEvidence })
   return (
     <Panel
       title="Evidence"
-      className="h-full min-h-[520px]"
+      className="max-h-[380px] overflow-hidden"
       action={
         <div className="flex gap-1">
           {tabs.map((t) => (
@@ -44,7 +53,7 @@ export function EvidencePanel({ evidence }: { evidence: VoiceIncidentEvidence })
             <p className="text-xs text-room-muted">
               What the customer heard — agents with L1 access see this only.
             </p>
-            <div className="max-h-[420px] space-y-2 overflow-y-auto rounded-lg border border-room-border bg-room-bg p-3 font-mono text-xs leading-relaxed">
+            <div className="max-h-[260px] space-y-2 overflow-y-auto rounded-lg border border-room-border bg-room-bg p-3 font-mono text-xs leading-relaxed">
               {evidence.layer1_conversation.segments.map((segment) => (
                 <div
                   key={segment.turn_id}
@@ -105,14 +114,69 @@ export function EvidencePanel({ evidence }: { evidence: VoiceIncidentEvidence })
         )}
 
         {tab === "customer" && (
-          <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed border-room-border bg-room-bg p-6 text-center">
-            <div className="text-sm font-medium text-room-muted">
-              Pattern context · Phase 2
-            </div>
-            <p className="mt-2 max-w-sm text-xs text-room-muted">
-              Prior calls, recurrence, and workflow patterns will appear here
-              when Pattern Analyst is connected.
+          <div className="space-y-3">
+            <p className="text-xs text-room-muted">
+              CRM lookup — matched from call evidence (phone, customer id, VNR).
             </p>
+            {crmLink?.customer ? (
+              <div className="rounded-lg border border-trace/30 bg-trace/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-trace">
+                    {crmLink.customer.name}
+                  </div>
+                  <span className="text-[10px] uppercase text-room-muted">
+                    matched on {crmLink.matched_on}
+                  </span>
+                </div>
+                <dl className="mt-3 space-y-2 text-xs text-room-muted">
+                  <div>
+                    <span className="text-room-muted">ID </span>
+                    <code className="text-foreground">{crmLink.customer.customer_id}</code>
+                  </div>
+                  {crmLink.customer.phone ? <div>Phone: {crmLink.customer.phone}</div> : null}
+                  {crmLink.customer.email ? <div>Email: {crmLink.customer.email}</div> : null}
+                  {crmLink.customer.birth_date ? (
+                    <div>Birth date (CRM): {crmLink.customer.birth_date}</div>
+                  ) : null}
+                  {crmLink.customer.address ? <div>Address: {crmLink.customer.address}</div> : null}
+                  {crmLink.customer.vnr_last4 ? (
+                    <div>VNR last 4: {crmLink.customer.vnr_last4}</div>
+                  ) : null}
+                  {crmLink.customer.prior_calls_14d != null ? (
+                    <div>Prior calls (14d): {crmLink.customer.prior_calls_14d}</div>
+                  ) : null}
+                  {crmLink.customer.notes ? (
+                    <div className="italic text-signal">{crmLink.customer.notes}</div>
+                  ) : null}
+                  {crmLink.customer.open_tickets?.length ? (
+                    <div>
+                      Open tickets:
+                      <ul className="mt-1 list-inside list-disc">
+                        {crmLink.customer.open_tickets.map((t) => (
+                          <li key={t.id}>{t.subject}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-room-border bg-room-bg p-6 text-center text-sm text-room-muted">
+                No CRM match yet.
+                {crmLookup?.hints_used ? (
+                  <pre className="mt-3 text-left font-mono text-[10px]">
+                    {JSON.stringify(crmLookup.hints_used, null, 2)}
+                  </pre>
+                ) : (
+                  <p className="mt-2 text-xs">
+                    Run investigation or add customer at{" "}
+                    <a href="/crm" className="text-trace hover:underline">
+                      /crm
+                    </a>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

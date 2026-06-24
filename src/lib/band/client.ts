@@ -1,4 +1,43 @@
-const DEFAULT_BASE_URL = "https://api.band.ai";
+const DEFAULT_BASE_URL = "https://app.band.ai/api/v1";
+
+const LOCAL_ROOM_PREFIX = "local-";
+
+export function isLocalBandRoom(roomId: string): boolean {
+  return roomId.startsWith(LOCAL_ROOM_PREFIX);
+}
+
+export function bandRoomLimitReached(error: unknown): boolean {
+  if (!(error instanceof BandApiError) || error.status !== 403) {
+    return false;
+  }
+  const body = error.body;
+  if (body && typeof body === "object") {
+    const record = body as Record<string, unknown>;
+    const code =
+      record.code ??
+      (record.error && typeof record.error === "object"
+        ? (record.error as Record<string, unknown>).code
+        : undefined);
+    if (code === "limit_reached") return true;
+  }
+  return error.message.includes("limit_reached");
+}
+
+function localBandRoomId(): string {
+  return `${LOCAL_ROOM_PREFIX}${crypto.randomUUID()}`;
+}
+
+function localBandMessage(
+  content: string,
+  metadata?: Record<string, unknown>,
+): BandMessageRecord {
+  return {
+    id: crypto.randomUUID(),
+    content,
+    metadata,
+  };
+}
+
 export class BandApiError extends Error {
   constructor(
     message: string,
@@ -10,8 +49,8 @@ export class BandApiError extends Error {
   }
 }
 
-function getConfig() {
-  const apiKey = process.env.BAND_API_KEY;
+function getConfig(apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride || process.env.BAND_API_KEY;
   const baseUrl = process.env.BAND_REST_URL ?? DEFAULT_BASE_URL;
 
   if (!apiKey) {
@@ -24,8 +63,9 @@ function getConfig() {
 async function bandFetch<T>(
   path: string,
   init?: RequestInit,
+  apiKeyOverride?: string,
 ): Promise<T> {
-  const { apiKey, baseUrl } = getConfig();
+  const { apiKey, baseUrl } = getConfig(apiKeyOverride);
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
@@ -72,6 +112,13 @@ export type BandMessageRecord = {
   metadata?: Record<string, unknown>;
 };
 
+export type BandParticipant = {
+  id: string;
+  handle?: string;
+  name?: string;
+  participant_id?: string;
+};
+
 function unwrapBandResource<T>(
   body: unknown,
   nestedKeys: string[] = [],
@@ -114,8 +161,8 @@ function requireId<T extends { id?: string }>(
   return value;
 }
 
-export async function getAgentProfile(): Promise<BandAgentProfile> {
-  const raw = await bandFetch<unknown>("/agent/me");
+export async function getAgentProfile(apiKey?: string): Promise<BandAgentProfile> {
+  const raw = await bandFetch<unknown>("/agent/me", undefined, apiKey);
   return requireId(
     "getAgentProfile",
     unwrapBandResource<BandAgentProfile>(raw, ["agent"]),
@@ -126,22 +173,130 @@ export async function getAgentProfile(): Promise<BandAgentProfile> {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function createRoom(taskId?: string): Promise<BandChatRoom> {
-  const payload =
-    taskId && UUID_RE.test(taskId)
-      ? { chat: { task_id: taskId } }
-      : { chat: {} };
+/** True when posts target a user-owned demo room via BAND_REUSE_ROOM_ID. */
+export function isReusingBandRoom(): boolean {
+  const reuseId = process.env.BAND_REUSE_ROOM_ID?.trim();
+  return Boolean(reuseId && UUID_RE.test(reuseId));
+}
 
-  const raw = await bandFetch<unknown>("/agent/chats", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+/**
+ * Quiet Band demo: do not @mention internal LLM agents (Normaliezer, Verdictjudge).
+ * They auto-reply with thoughts/tool calls and flood the room (and burn OpenAI quota).
+ * Default ON — set BAND_DEMO_QUIET=0 only if you want autonomous Normalizer replies.
+ */
+export function isBandDemoQuiet(): boolean {
+  const flag = process.env.BAND_DEMO_QUIET?.trim().toLowerCase();
+  if (flag === "0" || flag === "false") return false;
+  if (flag === "1" || flag === "true") return true;
+  return true;
+}
 
-  return requireId(
-    "createRoom",
-    unwrapBandResource<BandChatRoom>(raw, ["chat"]),
-    raw,
+/** Room owner key for participant adds when reusing a manually created chat. */
+export function getBandRoomHostApiKey(roomCreatorApiKey?: string): string {
+  if (isReusingBandRoom() && process.env.BAND_API_KEY) {
+    return process.env.BAND_API_KEY;
+  }
+  return roomCreatorApiKey ?? process.env.BAND_API_KEY!;
+}
+
+export async function createRoom(options?: {
+  taskId?: string;
+  title?: string;
+  apiKey?: string;
+  /** When set, skip API create and post into this room (Verdict vs Explanation). */
+  reuseRoomId?: string;
+}): Promise<BandChatRoom> {
+  const explicitReuse = options?.reuseRoomId?.trim();
+  if (explicitReuse && UUID_RE.test(explicitReuse)) {
+    return { id: explicitReuse, title: options?.title };
+  }
+
+  const reuseId = process.env.BAND_REUSE_ROOM_ID?.trim();
+  if (reuseId && UUID_RE.test(reuseId)) {
+    return { id: reuseId, title: options?.title };
+  }
+
+  const chat: Record<string, unknown> = {};
+
+  if (options?.taskId && UUID_RE.test(options.taskId)) {
+    chat.task_id = options.taskId;
+  }
+
+  if (options?.title?.trim()) {
+    chat.title = options.title.trim();
+  }
+
+  try {
+    const raw = await bandFetch<unknown>("/agent/chats", {
+      method: "POST",
+      body: JSON.stringify({ chat }),
+    }, options?.apiKey);
+
+    const room = requireId(
+      "createRoom",
+      unwrapBandResource<BandChatRoom>(raw, ["chat"]),
+      raw,
+    );
+
+    return room;
+  } catch (error) {
+    const localRoom = {
+      id: localBandRoomId(),
+      title: options?.title,
+    };
+
+    console.warn(
+      "Band room creation failed; using local room fallback.",
+      error instanceof Error ? error.message : error,
+    );
+
+    return localRoom;
+  }
+}
+
+/** Visible chat message — appears in the Band room message stream (not hidden /events). */
+export async function postChatMessageAsAgent(
+  roomId: string,
+  content: string,
+  options?: {
+    apiKey?: string;
+    metadata?: Record<string, unknown>;
+    mentions?: Array<{ id: string; handle?: string; name?: string }>;
+  },
+): Promise<BandMessageRecord> {
+  if (isLocalBandRoom(roomId)) {
+    return localBandMessage(content, options?.metadata);
+  }
+
+  const mentions = options?.mentions ?? [];
+
+  const body: Record<string, unknown> = {
+    message: {
+      content,
+      mentions,
+    },
+  };
+
+  const data = await bandFetch<unknown>(
+    `/agent/chats/${roomId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    options?.apiKey,
   );
+
+  const message = requireId(
+    "postChatMessageAsAgent",
+    unwrapBandResource<BandMessageRecord>(data, ["message"]),
+    data,
+  );
+
+  return {
+    id: message.id,
+    content,
+    metadata: options?.metadata,
+  };
 }
 
 export async function postMessage(
@@ -149,8 +304,13 @@ export async function postMessage(
   content: string,
   metadata?: Record<string, unknown>,
   mentions?: Array<{ id: string; handle?: string; name?: string }>,
+  apiKey?: string,
 ): Promise<BandMessageRecord> {
-  const me = await getAgentProfile();
+  if (isLocalBandRoom(roomId)) {
+    return localBandMessage(content, metadata);
+  }
+
+  const me = await getAgentProfile(apiKey);
 
   const resolvedMentions = mentions?.length
     ? mentions
@@ -167,11 +327,13 @@ export async function postMessage(
   // Band rejects self-mentions on /messages (cannot_mention_self).
   // Orchestrator posts are internal analysis → use /events (no mentions).
   if (mentionsSelf && !mentions?.length) {
-    return postAgentRoomUpdate(roomId, content, metadata);
+    return postAgentRoomUpdate(roomId, content, metadata, apiKey);
   }
 
-  const mentionHandle = resolvedMentions[0]?.handle ?? "incident-room";
-  const routedContent = content.includes("@")
+  const mentionHandle = normalizeBandHandle(
+    resolvedMentions[0]?.handle ?? "incident-room",
+  );
+  const routedContent = contentIncludesMention(content, resolvedMentions)
     ? content
     : `@${mentionHandle} ${content}`;
 
@@ -186,6 +348,7 @@ export async function postMessage(
         },
       }),
     },
+    apiKey,
   );
 
   return requireId(
@@ -199,7 +362,12 @@ export async function postAgentRoomUpdate(
   roomId: string,
   content: string,
   metadata?: Record<string, unknown>,
+  apiKey?: string,
 ): Promise<BandMessageRecord> {
+  if (isLocalBandRoom(roomId)) {
+    return localBandMessage(content, metadata);
+  }
+
   const raw = await bandFetch<unknown>(`/agent/chats/${roomId}/events`, {
     method: "POST",
     body: JSON.stringify({
@@ -209,7 +377,7 @@ export async function postAgentRoomUpdate(
         metadata,
       },
     }),
-  });
+  }, apiKey);
 
   const event = requireId(
     "postAgentRoomUpdate",
@@ -228,7 +396,21 @@ export async function postEvent(
   roomId: string,
   eventType: string,
   payload: Record<string, unknown>,
+  apiKey?: string,
 ): Promise<unknown> {
+  if (isLocalBandRoom(roomId)) {
+    return {
+      data: {
+        event: {
+          id: crypto.randomUUID(),
+          message_type: eventType,
+          content: payload.content,
+          metadata: payload.metadata,
+        },
+      },
+    };
+  }
+
   return bandFetch(`/agent/chats/${roomId}/events`, {
     method: "POST",
     body: JSON.stringify({
@@ -241,35 +423,74 @@ export async function postEvent(
         metadata: payload.metadata as Record<string, unknown> | undefined,
       },
     }),
-  });
+  }, apiKey);
 }
 
-export async function getRoomHistory(roomId: string): Promise<BandMessageRecord[]> {
-  const data = await bandFetch<unknown>(`/agent/chats/${roomId}/context`);
+export async function addChatParticipant(
+  roomId: string,
+  participantId: string,
+  apiKey?: string,
+): Promise<BandParticipant> {
+  const raw = await bandFetch<unknown>(
+    `/agent/chats/${roomId}/participants`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        participant: {
+          participant_id: participantId,
+        },
+      }),
+    },
+    apiKey,
+  );
 
-  const unwrapped = unwrapBandResource<unknown>(data);
-  const candidates = [unwrapped, data];
+  return unwrapBandResource<BandParticipant>(raw, ["participant"]);
+}
 
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate as BandMessageRecord[];
-    }
-    if (candidate && typeof candidate === "object") {
-      const record = candidate as Record<string, unknown>;
-      if (Array.isArray(record.messages)) {
-        return record.messages as BandMessageRecord[];
-      }
-      if (
-        record.context &&
-        typeof record.context === "object" &&
-        Array.isArray((record.context as { messages?: unknown }).messages)
-      ) {
-        return (record.context as { messages: BandMessageRecord[] }).messages;
-      }
-    }
+export async function getRoomHistory(
+  roomId: string,
+  apiKey?: string,
+): Promise<BandMessageRecord[]> {
+  if (isLocalBandRoom(roomId)) {
+    return [];
   }
 
-  return [];
+  try {
+    const data = await bandFetch<unknown>(
+      `/agent/chats/${roomId}/context`,
+      undefined,
+      apiKey,
+    );
+
+    const unwrapped = unwrapBandResource<unknown>(data);
+    const candidates = [unwrapped, data];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate as BandMessageRecord[];
+      }
+      if (candidate && typeof candidate === "object") {
+        const record = candidate as Record<string, unknown>;
+        if (Array.isArray(record.messages)) {
+          return record.messages as BandMessageRecord[];
+        }
+        if (
+          record.context &&
+          typeof record.context === "object" &&
+          Array.isArray((record.context as { messages?: unknown }).messages)
+        ) {
+          return (record.context as { messages: BandMessageRecord[] }).messages;
+        }
+      }
+    }
+
+    return [];
+  } catch (error) {
+    if (error instanceof BandApiError && error.status === 404) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export function formatBandPost(
@@ -278,4 +499,21 @@ export function formatBandPost(
   payload: unknown,
 ): string {
   return `[${agentRole}] ${messageType}\n\n${JSON.stringify(payload, null, 2)}`;
+}
+
+function normalizeBandHandle(handle: string) {
+  return handle.replace(/^@+/, "");
+}
+
+function contentIncludesMention(
+  content: string,
+  mentions: Array<{ id: string; handle?: string; name?: string }>,
+) {
+  return mentions.some((mention) => {
+    if (!mention.handle) {
+      return false;
+    }
+
+    return content.includes(`@${normalizeBandHandle(mention.handle)}`);
+  });
 }

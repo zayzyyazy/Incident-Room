@@ -1,4 +1,5 @@
 import { VoiceIncidentEvidence } from "@/lib/evidence/types";
+import { IncidentCrmLink } from "@/lib/crm/types";
 import { ConversationAnalysis } from "@/lib/band/message-types";
 
 export function forAgent01(evidence: VoiceIncidentEvidence) {
@@ -12,6 +13,7 @@ export function forAgent01(evidence: VoiceIncidentEvidence) {
 export function forAgent02(
   evidence: VoiceIncidentEvidence,
   conversationAnalysis: ConversationAnalysis,
+  crmLink?: IncidentCrmLink,
 ) {
   return {
     incident_id: evidence.incident_id,
@@ -26,5 +28,22 @@ export function forAgent02(
       spoken_entities: conversationAnalysis.spoken_entities,
       notable_turns: conversationAnalysis.notable_turns,
     },
+    crm_context: crmLink
+      ? {
+          matched_on: crmLink.matched_on,
+          customer: {
+            customer_id: crmLink.customer.customer_id,
+            name: crmLink.customer.name,
+            phone: crmLink.customer.phone,
+            email: crmLink.customer.email,
+            birth_date: crmLink.customer.birth_date,
+            address: crmLink.customer.address,
+            vnr_last4: crmLink.customer.vnr_last4,
+            prior_calls_14d: crmLink.customer.prior_calls_14d,
+            notes: crmLink.customer.notes,
+            open_tickets: crmLink.customer.open_tickets,
+          },
+        }
+      : null,
   };
 }

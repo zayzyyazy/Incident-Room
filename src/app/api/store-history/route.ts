@@ -1,8 +1,17 @@
-// app/api/store-history/route.ts
 import { NextResponse } from "next/server";
-import getMongoClient from "@/lib/mongodb";
+import { getChatsCollection } from "@/lib/mongodb";
+import { isMongoConfigured } from "@/lib/mongodb/config";
+
+const SINGLE_USER_ID = "user-123";
 
 export async function POST(request: Request) {
+  if (!isMongoConfigured()) {
+    return NextResponse.json(
+      { error: "MongoDB is not configured. Set MONGODB_URI in .env.local" },
+      { status: 503 },
+    );
+  }
+
   try {
     const {
       chatId,
@@ -11,6 +20,7 @@ export async function POST(request: Request) {
       content,
       intent,
       toolsCalled,
+      status,
       roomId,
       workflowTrace,
       analyzer,
@@ -19,33 +29,33 @@ export async function POST(request: Request) {
       incident,
     } = await request.json();
 
-    if (!chatId || !userId || !role || !content) {
+    if (!chatId || !role || !content) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const client = await getMongoClient();
-    const db = client.db("bands_hackathondb");
-    const collection = db.collection("chats");
+    const collection = await getChatsCollection();
 
     await collection.insertOne({
       chatId,
-      userId,
+      userId: userId ?? SINGLE_USER_ID,
       role,
       content,
       intent: intent || null,
       toolsCalled: toolsCalled || [],
+      status: status ?? null,
       roomId: roomId || null,
       workflowTrace: workflowTrace || [],
       analyzer: analyzer || null,
       evidence: evidence || null,
       investigationInput: investigationInput || null,
       incident: incident || null,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, userId: userId ?? SINGLE_USER_ID });
   } catch (error) {
     console.error("Failed to store chat history:", error);
-    return NextResponse.json({ error: "Failed to store message" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to store message";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
