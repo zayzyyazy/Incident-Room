@@ -1,0 +1,46 @@
+{
+  "samples": [
+    {
+      "id": "vapi-refund-denied",
+      "platform": "vapi",
+      "title": "Vapi · refund confirmed, Stripe charge still active",
+      "file": "raw-vapi-refund-denied.json",
+      "hook": "Agent promises full refund; refund_payment tool returns 402."
+    },
+    {
+      "id": "retell-appointment-gap",
+      "platform": "retell",
+      "title": "Retell · reschedule confirmed, calendar empty",
+      "file": "raw-retell-appointment-gap.json",
+      "hook": "Patient hears new slot locked in; Cal.com API 503."
+    },
+    {
+      "id": "bland-rx-transfer-failed",
+      "platform": "bland",
+      "title": "Bland · pharmacist transfer promised, bridge never connected",
+      "file": "raw-bland-rx-transfer-failed.json",
+      "hook": "Warm transfer to pharmacist; pathway_logs show transfer_tool error."
+    },
+    {
+      "id": "openai-ticket-ghost",
+      "platform": "openai_chat",
+      "title": "OpenAI-style · support ticket ID read aloud, Zendesk 500",
+      "file": "raw-openai-ticket-ghost.json",
+      "hook": "Classic messages[] + embedded tool_calls shape."
+    },
+    {
+      "id": "generic-crm-write-fail",
+      "platform": "generic",
+      "title": "Generic export · policy change saved, CRM write failed",
+      "file": "raw-generic-crm-write-fail.json",
+      "hook": "utterances + executions keys — unknown exporter."
+    },
+    {
+      "id": "leaping-warranty-export",
+      "platform": "leaping",
+      "title": "Leaping calls[] export · warranty replacement approved",
+      "file": "raw-leaping-warranty-export.json",
+      "hook": "Full Leaping transcript event stream in calls[0]."
+    }
+  ]
+}

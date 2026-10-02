@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { AgentFeed } from "@/components/incident/AgentFeed";
-import { EvidencePanel } from "@/components/incident/EvidencePanel";
-import { VerdictStrip } from "@/components/incident/VerdictStrip";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LiveInvestigationTheater } from "@/components/demo/LiveInvestigationTheater";
 import { AppShell, StatusPill } from "@/components/ui/shell";
-import { buildFeedFromInvestigation } from "@/lib/agents/registry";
+import { InvestigationSidebar, InvestigationSection } from "@/components/ui/investigation-sidebar";
+import { InvestigationSectionPanels } from "@/components/demo/InvestigationSectionPanels";
 import { IncidentRecord, InvestigationRun } from "@/lib/incidents/types";
+import { KlausDemoGraph } from "@/lib/workflow/klaus-demo-graph";
+
+function formatCallMeta(incident: IncidentRecord) {
+  const meta = incident.evidence.call_metadata;
+  if (!meta?.duration_sec) return null;
+  const mins = Math.floor(meta.duration_sec / 60);
+  const secs = meta.duration_sec % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")} call`;
+}
 
 export default function IncidentRoomPage({
   params,
@@ -16,20 +24,29 @@ export default function IncidentRoomPage({
 }) {
   const [incident, setIncident] = useState<IncidentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [investigating, setInvestigating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [latestRun, setLatestRun] = useState<InvestigationRun | null>(null);
+  const [workflow, setWorkflow] = useState<KlausDemoGraph | null>(null);
+  const [live, setLive] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [section, setSection] = useState<InvestigationSection>("theories");
 
   const loadIncident = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/incidents/${params.id}`);
-      const data = await response.json();
-      if (!data.ok) {
-        throw new Error(data.error ?? "Failed to load incident");
-      }
+      const [incRes, wfRes] = await Promise.all([
+        fetch(`/api/incidents/${params.id}`),
+        fetch(`/api/incidents/${params.id}/workflow`),
+      ]);
+      const data = await incRes.json();
+      if (!data.ok) throw new Error(data.error ?? "Failed to load incident");
       setIncident(data.incident);
-      setLatestRun(data.incident.investigations.at(-1) ?? null);
+      const run = data.incident.investigations.at(-1) ?? null;
+      setLatestRun(run);
+      if (run?.status === "failed" && run.error) setError(run.error);
+
+      const wfData = await wfRes.json();
+      if (wfData.ok) setWorkflow(wfData.graph);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -41,40 +58,35 @@ export default function IncidentRoomPage({
     loadIncident();
   }, [loadIncident]);
 
-  async function runInvestigation() {
-    setInvestigating(true);
-    setError(null);
+  useEffect(() => {
+    if (!live) return;
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [live]);
 
-    try {
-      const response = await fetch(`/api/incidents/${params.id}/investigate`, {
-        method: "POST",
-      });
-      const data = await response.json();
+  const callMeta = useMemo(
+    () => (incident ? formatCallMeta(incident) : null),
+    [incident],
+  );
 
-      if (!data.ok) {
-        throw new Error(data.error ?? "Investigation failed");
-      }
-
-      setLatestRun(data.run);
-      await loadIncident();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Investigation failed");
-    } finally {
-      setInvestigating(false);
-    }
-  }
+  const elapsedLabel = useMemo(() => {
+    const h = Math.floor(elapsed / 3600);
+    const m = Math.floor((elapsed % 3600) / 60);
+    const s = elapsed % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }, [elapsed]);
 
   if (loading) {
     return (
-      <AppShell title={params.id} subtitle="Loading incident…">
-        <div className="text-room-muted">Loading…</div>
+      <AppShell variant="investigation" title={params.id} subtitle="Loading…">
+        <div className="text-room-muted">Loading incident…</div>
       </AppShell>
     );
   }
 
   if (!incident) {
     return (
-      <AppShell title={params.id} subtitle="Not found">
+      <AppShell variant="investigation" title={params.id} subtitle="Not found">
         <p className="text-alert">{error ?? "Incident not found"}</p>
         <Link href="/" className="mt-4 inline-block text-trace">
           ← Back to desk
@@ -83,86 +95,75 @@ export default function IncidentRoomPage({
     );
   }
 
-  const feedMessages = latestRun?.status === "complete"
-    ? buildFeedFromInvestigation({
-        bandMessageIds: latestRun.bandMessageIds,
-        conversationAnalysis: latestRun.conversationAnalysis,
-        outcomeAnalysis: latestRun.outcomeAnalysis,
-      })
-    : [];
-
-  const roomId = latestRun?.roomId ?? incident.lastRoomId;
+  const platformLabel = incident.evidence.source_platform.toUpperCase();
 
   return (
     <AppShell
+      variant="investigation"
       title={incident.evidence.title}
-      subtitle={incident.id}
+      subtitle={`${platformLabel} · ${incident.id}`}
+      meta={callMeta ?? undefined}
+      sidebar={
+        <InvestigationSidebar
+          incidentId={params.id}
+          active={section}
+          live={live}
+          onSelect={setSection}
+        />
+      }
       actions={
         <div className="flex items-center gap-3">
-          <StatusPill status={investigating ? "investigating" : incident.status} />
-          {roomId ? (
-            <a
-              href="https://band.ai"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-room-muted underline-offset-2 hover:text-trace hover:underline"
-              title={`Band room: ${roomId}`}
-            >
-              Band ↗
-            </a>
+          {live ? (
+            <span className="hidden rounded-md border border-room-border bg-room-elevated px-2.5 py-1 font-mono text-xs text-room-muted sm:inline">
+              LIVE {elapsedLabel}
+            </span>
           ) : null}
-          <button
-            type="button"
-            onClick={runInvestigation}
-            disabled={investigating}
-            className="rounded-lg border border-signal/50 bg-signal/15 px-4 py-2 text-sm font-semibold text-signal transition hover:bg-signal/25 disabled:opacity-50"
-          >
-            {investigating ? "Investigating…" : "Run investigation"}
-          </button>
+          <StatusPill
+            status={
+              live
+                ? "investigating"
+                : latestRun?.status === "complete"
+                  ? "complete"
+                  : incident.status
+            }
+          />
         </div>
       }
     >
-      {error ? (
-        <div className="mb-4 rounded-lg border border-alert/40 bg-alert/10 px-4 py-3 text-sm text-alert">
+      {error && !live ? (
+        <div className="mb-4 rounded-xl border border-alert/40 bg-alert/10 px-4 py-3 text-sm text-alert">
           {error}
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <EvidencePanel evidence={incident.evidence} />
-        <AgentFeed
-          messages={feedMessages}
-          loading={investigating}
-          emptyHint="Click Run investigation — agents will analyze blind layers and post to Band."
+      <div className={section === "theories" ? undefined : "hidden"}>
+        <LiveInvestigationTheater
+          incidentId={params.id}
+          evidence={incident.evidence}
+          workflow={workflow ?? undefined}
+          initialRun={latestRun}
+          onStatusChange={(s) => {
+            const isLive = s === "connecting" || s === "live";
+            setLive(isLive);
+            if (s === "connecting") setElapsed(0);
+          }}
+          onGoToReports={() => setSection("reports")}
+          onComplete={(run) => {
+            setLive(false);
+            setLatestRun(run);
+            setError(null);
+            void loadIncident();
+          }}
         />
       </div>
 
-      <VerdictStrip run={latestRun} roomId={roomId} />
-
-      {incident.investigations.length > 0 ? (
-        <section className="mt-6 rounded-xl border border-room-border bg-room-panel p-4">
-          <h3 className="text-[11px] uppercase tracking-[0.18em] text-room-muted">
-            Investigation history
-          </h3>
-          <ul className="mt-3 space-y-2">
-            {[...incident.investigations].reverse().map((run) => (
-              <li
-                key={run.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-room-border bg-room-bg px-3 py-2 text-xs"
-              >
-                <span className="font-mono text-room-muted">{run.id}</span>
-                <StatusPill status={run.status} />
-                <span className="text-room-muted">
-                  {run.conversationAnalysis?.conversation_verdict ?? "—"} /{" "}
-                  {run.outcomeAnalysis?.execution_verdict ?? "—"}
-                </span>
-                <span className="text-room-muted">
-                  {new Date(run.startedAt).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {section !== "theories" ? (
+        <InvestigationSectionPanels
+          section={section}
+          evidence={incident.evidence}
+          incidentId={params.id}
+          run={latestRun}
+        />
       ) : null}
     </AppShell>
   );

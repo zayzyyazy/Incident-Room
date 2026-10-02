@@ -12,6 +12,7 @@ import {
 import { runConversationAnalyst } from "@/lib/agents/conversation-analyst";
 import { runOutcomeInvestigator } from "@/lib/agents/outcome-investigator";
 import { VoiceIncidentEvidence } from "@/lib/evidence/types";
+import { IncidentCrmLink } from "@/lib/crm/types";
 import { forAgent01, forAgent02 } from "@/lib/orchestrator/context-filter";
 
 export type TwoAgentInvestigationResult = {
@@ -28,8 +29,12 @@ export type TwoAgentInvestigationResult = {
 export async function runTwoAgentInvestigation(
   evidence: VoiceIncidentEvidence,
   taskId?: string,
+  crmLink?: IncidentCrmLink,
 ): Promise<TwoAgentInvestigationResult> {
-  const room = await createRoom(taskId);
+  const room = await createRoom({
+    taskId,
+    title: `${evidence.incident_id} · ${evidence.title}`,
+  });
 
   const conversationAnalysis = await runConversationAnalyst(
     forAgent01(evidence),
@@ -46,7 +51,7 @@ export async function runTwoAgentInvestigation(
   );
 
   const outcomeAnalysis = await runOutcomeInvestigator(
-    forAgent02(evidence, conversationAnalysis),
+    forAgent02(evidence, conversationAnalysis, crmLink),
     conversationPost.id,
   );
 

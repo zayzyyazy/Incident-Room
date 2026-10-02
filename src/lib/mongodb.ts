@@ -1,32 +1,47 @@
-// lib/mongodb.ts (create this)
-import { MongoClient } from 'mongodb';
+import { MongoClient, type Collection, type Db } from "mongodb";
+import { CHATS_COLLECTION, getMongoDbName } from "@/lib/mongodb/config";
 
 const options = {};
 
-let client: MongoClient;
 let clientPromise: Promise<MongoClient> | undefined;
 
-export default function getMongoClient(): Promise<MongoClient> {
-  const uri = process.env.MONGODB_URI;
-
+function getUri(): string {
+  const uri = process.env.MONGODB_URI?.trim();
   if (!uri) {
-    throw new Error('Add MONGODB_URI to .env');
+    throw new Error("MONGODB_URI is not set. Add it to .env.local");
   }
+  return uri;
+}
 
-  if (process.env.NODE_ENV === 'development') {
-    const globalWithMongo = global as typeof globalThis & {
-      _mongoClientPromise?: Promise<MongoClient>;
-    };
-    if (!globalWithMongo._mongoClientPromise) {
-      client = new MongoClient(uri, options);
-      globalWithMongo._mongoClientPromise = client.connect();
-    }
-    return globalWithMongo._mongoClientPromise;
-  }
-
+export async function getMongoClient(): Promise<MongoClient> {
   if (!clientPromise) {
-    client = new MongoClient(uri, options);
-    clientPromise = client.connect();
+    const uri = getUri();
+    if (process.env.NODE_ENV === "development") {
+      const globalWithMongo = global as typeof globalThis & {
+        _mongoClientPromise?: Promise<MongoClient>;
+      };
+      if (!globalWithMongo._mongoClientPromise) {
+        const client = new MongoClient(uri, options);
+        globalWithMongo._mongoClientPromise = client.connect();
+      }
+      clientPromise = globalWithMongo._mongoClientPromise;
+    } else {
+      const client = new MongoClient(uri, options);
+      clientPromise = client.connect();
+    }
   }
   return clientPromise;
 }
+
+export async function getMongoDb(): Promise<Db> {
+  const client = await getMongoClient();
+  return client.db(getMongoDbName());
+}
+
+export async function getChatsCollection(): Promise<Collection> {
+  const db = await getMongoDb();
+  return db.collection(CHATS_COLLECTION);
+}
+
+/** @deprecated Use getMongoClient() — kept for older imports */
+export default getMongoClient;

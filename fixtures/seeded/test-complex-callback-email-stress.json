@@ -1,0 +1,362 @@
+{
+  "incident_id": "TEST-2026-0612-complex-callback-email",
+  "source_platform": "leaping",
+  "title": "Coord stress — callback + email promised, scheduling API silent-failed, CRM note only",
+  "call_metadata": {
+    "duration_sec": 487,
+    "status": "completed",
+    "leaping_call_id": "leap_call_complex_stress_0612",
+    "agent_id": "pflegemittelbox-voice-prod-v3",
+    "recording_url": "https://recordings.example.internal/leap_call_complex_stress_0612.wav"
+  },
+  "layer1_conversation": {
+    "transcript": "Agent: Guten Tag, Pflegemittelbox Kundenservice. Mein Name ist Marie. Wie kann ich Ihnen helfen?\nCustomer: Hallo, hier spricht Thomas Weber. Ich warte seit drei Tagen auf einen Rückruf wegen meiner Lieferung.\nAgent: Das tut mir leid, Herr Weber. Ich sehe Ihre Versichertennummer endet auf 7734. Stimmt das?\nCustomer: Ja, genau. Und ich brauche heute noch eine Antwort.\nAgent: Ich verstehe Ihren Ärger. Ich schaue mir Ihre offenen Vorgänge an.\nCustomer: Letzte Woche wurde mir ein Rückruf für Dienstag versprochen. Nichts ist passiert.\nAgent: Ich sehe hier einen offenen Lieferstatus und eine fehlgeschlagene Benachrichtigung. Ich lege das jetzt sauber an.\nCustomer: Was heißt das konkret? Rufen Sie mich an oder nicht?\nAgent: Ich buche Ihnen einen Rückruf für morgen Vormittag zwischen neun und elf Uhr ein.\nCustomer: Und bekomme ich das auch schriftlich?\nAgent: Ja. Ich schicke Ihnen gleich eine Bestätigung per E-Mail an die Adresse, die bei uns hinterlegt ist.\nCustomer: thomas.weber@posteo.net — ist das noch die richtige?\nAgent: Einen Moment, ich prüfe das.\nCustomer: Bitte nicht wieder nur sagen, dass es erledigt ist.\nAgent: Die E-Mail-Adresse ist korrekt. Ich habe den Rückruf eingetragen und die Bestätigung wird versendet.\nCustomer: Also morgen Vormittag, und die Mail kommt heute noch?\nAgent: Genau, das ist bei mir bestätigt. Meine Kollegen im Rückrufteam melden sich morgen.\nCustomer: Und was ist mit der Lieferung selbst?\nAgent: Ich habe zusätzlich eine Notiz für das Logistikteam angelegt, damit Ihr Fall nicht noch einmal untergeht.\nCustomer: Okay. Dann erwarte ich die Mail in den nächsten Minuten.\nAgent: Sehr gerne. Gibt es sonst noch etwas?\nCustomer: Nein, das war's. Aber bitte diesmal wirklich.\nAgent: Selbstverständlich. Ich wünsche Ihnen einen angenehmen Tag. Auf Wiederhören.",
+    "segments": [
+      {
+        "turn_id": "T01",
+        "speaker": "agent",
+        "text": "Guten Tag, Pflegemittelbox Kundenservice. Mein Name ist Marie. Wie kann ich Ihnen helfen?",
+        "start_sec": 0
+      },
+      {
+        "turn_id": "T02",
+        "speaker": "customer",
+        "text": "Hallo, hier spricht Thomas Weber. Ich warte seit drei Tagen auf einen Rückruf wegen meiner Lieferung.",
+        "start_sec": 8
+      },
+      {
+        "turn_id": "T03",
+        "speaker": "agent",
+        "text": "Das tut mir leid, Herr Weber. Ich sehe Ihre Versichertennummer endet auf 7734. Stimmt das?",
+        "start_sec": 22
+      },
+      {
+        "turn_id": "T04",
+        "speaker": "customer",
+        "text": "Ja, genau. Und ich brauche heute noch eine Antwort.",
+        "start_sec": 31
+      },
+      {
+        "turn_id": "T05",
+        "speaker": "agent",
+        "text": "Ich verstehe Ihren Ärger. Ich schaue mir Ihre offenen Vorgänge an.",
+        "start_sec": 38
+      },
+      {
+        "turn_id": "T06",
+        "speaker": "customer",
+        "text": "Letzte Woche wurde mir ein Rückruf für Dienstag versprochen. Nichts ist passiert.",
+        "start_sec": 46
+      },
+      {
+        "turn_id": "T07",
+        "speaker": "agent",
+        "text": "Ich sehe hier einen offenen Lieferstatus und eine fehlgeschlagene Benachrichtigung. Ich lege das jetzt sauber an.",
+        "start_sec": 58
+      },
+      {
+        "turn_id": "T08",
+        "speaker": "customer",
+        "text": "Was heißt das konkret? Rufen Sie mich an oder nicht?",
+        "start_sec": 71
+      },
+      {
+        "turn_id": "T09",
+        "speaker": "agent",
+        "text": "Ich buche Ihnen einen Rückruf für morgen Vormittag zwischen neun und elf Uhr ein.",
+        "start_sec": 79
+      },
+      {
+        "turn_id": "T10",
+        "speaker": "customer",
+        "text": "Und bekomme ich das auch schriftlich?",
+        "start_sec": 89
+      },
+      {
+        "turn_id": "T11",
+        "speaker": "agent",
+        "text": "Ja. Ich schicke Ihnen gleich eine Bestätigung per E-Mail an die Adresse, die bei uns hinterlegt ist.",
+        "start_sec": 95
+      },
+      {
+        "turn_id": "T12",
+        "speaker": "customer",
+        "text": "thomas.weber@posteo.net — ist das noch die richtige?",
+        "start_sec": 106
+      },
+      {
+        "turn_id": "T13",
+        "speaker": "agent",
+        "text": "Einen Moment, ich prüfe das.",
+        "start_sec": 114
+      },
+      {
+        "turn_id": "T14",
+        "speaker": "customer",
+        "text": "Bitte nicht wieder nur sagen, dass es erledigt ist.",
+        "start_sec": 119
+      },
+      {
+        "turn_id": "T15",
+        "speaker": "agent",
+        "text": "Die E-Mail-Adresse ist korrekt. Ich habe den Rückruf eingetragen und die Bestätigung wird versendet.",
+        "start_sec": 126
+      },
+      {
+        "turn_id": "T16",
+        "speaker": "customer",
+        "text": "Also morgen Vormittag, und die Mail kommt heute noch?",
+        "start_sec": 138
+      },
+      {
+        "turn_id": "T17",
+        "speaker": "agent",
+        "text": "Genau, das ist bei mir bestätigt. Meine Kollegen im Rückrufteam melden sich morgen.",
+        "start_sec": 145
+      },
+      {
+        "turn_id": "T18",
+        "speaker": "customer",
+        "text": "Und was ist mit der Lieferung selbst?",
+        "start_sec": 154
+      },
+      {
+        "turn_id": "T19",
+        "speaker": "agent",
+        "text": "Ich habe zusätzlich eine Notiz für das Logistikteam angelegt, damit Ihr Fall nicht noch einmal untergeht.",
+        "start_sec": 161
+      },
+      {
+        "turn_id": "T20",
+        "speaker": "customer",
+        "text": "Okay. Dann erwarte ich die Mail in den nächsten Minuten.",
+        "start_sec": 172
+      },
+      {
+        "turn_id": "T21",
+        "speaker": "agent",
+        "text": "Sehr gerne. Gibt es sonst noch etwas?",
+        "start_sec": 179
+      },
+      {
+        "turn_id": "T22",
+        "speaker": "customer",
+        "text": "Nein, das war's. Aber bitte diesmal wirklich.",
+        "start_sec": 184
+      },
+      {
+        "turn_id": "T23",
+        "speaker": "agent",
+        "text": "Selbstverständlich. Ich wünsche Ihnen einen angenehmen Tag. Auf Wiederhören.",
+        "start_sec": 191
+      }
+    ],
+    "intent": "callback_and_email_confirmation",
+    "behavioral_hints": [
+      {
+        "type": "repeat_contact_frustration",
+        "turn_ref": "T06",
+        "note": "Customer reports prior callback promise was not honored."
+      },
+      {
+        "type": "explicit_written_confirmation_request",
+        "turn_ref": "T10",
+        "note": "Customer asks for email proof after verbal callback promise."
+      },
+      {
+        "type": "premature_closure",
+        "turn_ref": "T15",
+        "note": "Agent states callback is booked and email will be sent before tool results are known."
+      },
+      {
+        "type": "double_commitment",
+        "turn_ref": "T17",
+        "note": "Agent confirms both tomorrow callback window and same-day email."
+      },
+      {
+        "type": "trust_erosion",
+        "turn_ref": "T14",
+        "note": "Customer explicitly warns against empty reassurance."
+      }
+    ]
+  },
+  "layer2_execution": {
+    "function_calls": [
+      {
+        "name": "get_customer_by_phone",
+        "args": { "phone": "+4917638821044" },
+        "result": {
+          "customer_id": "cust_weber_7734",
+          "name": "Thomas Weber",
+          "vnr_last4": "7734",
+          "email": "thomas.weber@posteo.net",
+          "status": "aktiv"
+        },
+        "status": "success",
+        "http_status": 200,
+        "turn_ref": "T03"
+      },
+      {
+        "name": "get_open_cases",
+        "args": { "customer_id": "cust_weber_7734" },
+        "result": {
+          "cases": [
+            {
+              "case_id": "case_8821",
+              "type": "delivery_delay",
+              "status": "open",
+              "promised_callback_at": "2026-06-09T10:00:00+02:00",
+              "callback_completed": false
+            },
+            {
+              "case_id": "case_8834",
+              "type": "notification_failure",
+              "status": "open"
+            }
+          ]
+        },
+        "status": "success",
+        "http_status": 200,
+        "turn_ref": "T05"
+      },
+      {
+        "name": "verify_email_on_file",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "email_spoken": "thomas.weber@posteo.net"
+        },
+        "result": { "match": true, "canonical_email": "thomas.weber@posteo.net" },
+        "status": "success",
+        "http_status": 200,
+        "turn_ref": "T13"
+      },
+      {
+        "name": "create_callback_appointment",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "slot_start": "2026-06-13T09:00:00+02:00",
+          "slot_end": "2026-06-13T11:00:00+02:00",
+          "reason": "delivery_followup",
+          "priority": "high"
+        },
+        "result": null,
+        "status": "timeout",
+        "http_status": 504,
+        "error_message": "504 Gateway Timeout from scheduling API after 30s",
+        "turn_ref": "T09"
+      },
+      {
+        "name": "create_callback_appointment",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "slot_start": "2026-06-13T09:00:00+02:00",
+          "slot_end": "2026-06-13T11:00:00+02:00",
+          "reason": "delivery_followup",
+          "priority": "high",
+          "retry": true
+        },
+        "result": null,
+        "status": "error",
+        "http_status": 503,
+        "error_message": "Scheduling service unavailable: circuit breaker open",
+        "turn_ref": "T15"
+      },
+      {
+        "name": "send_confirmation_email",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "template": "callback_confirmation_v2",
+          "to": "thomas.weber@posteo.net",
+          "variables": {
+            "callback_window": "morgen 09:00–11:00",
+            "case_id": "case_8821"
+          }
+        },
+        "result": null,
+        "status": "error",
+        "http_status": 422,
+        "error_message": "Cannot send confirmation: appointment_id missing",
+        "turn_ref": "T15"
+      },
+      {
+        "name": "create_crm_note",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "case_id": "case_8821",
+          "body": "Customer promised callback tomorrow AM + email confirmation. Scheduling API failed twice.",
+          "tags": ["voice", "callback", "scheduling_failure"]
+        },
+        "result": { "note_id": "note_99102", "status": "saved" },
+        "status": "success",
+        "http_status": 201,
+        "turn_ref": "T19"
+      },
+      {
+        "name": "notify_logistics_team",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "case_id": "case_8821",
+          "channel": "slack",
+          "message": "Repeat delivery delay — customer escalated on voice"
+        },
+        "result": null,
+        "status": "error",
+        "http_status": 500,
+        "error_message": "Internal webhook returned 500",
+        "turn_ref": "T19"
+      },
+      {
+        "name": "update_case_status",
+        "args": {
+          "case_id": "case_8821",
+          "status": "callback_scheduled",
+          "appointment_id": null
+        },
+        "result": {
+          "accepted": true,
+          "warning": "status updated without linked appointment"
+        },
+        "status": "success",
+        "http_status": 200,
+        "turn_ref": "T17"
+      },
+      {
+        "name": "send_confirmation_sms",
+        "args": {
+          "customer_id": "cust_weber_7734",
+          "template": "callback_confirmed"
+        },
+        "result": { "skipped": true, "reason": "no_appointment_id" },
+        "status": "error",
+        "http_status": 409,
+        "error_message": "SMS gateway rejected send: missing appointment reference",
+        "turn_ref": "T17"
+      }
+    ],
+    "side_effects": {
+      "appointment_created": false,
+      "appointment_id": null,
+      "sms_sent": false,
+      "crm_record_exists": true
+    },
+    "transitions": [
+      { "from": "greeting", "to": "identity_check", "turn_ref": "T03" },
+      { "from": "identity_check", "to": "case_lookup", "turn_ref": "T05" },
+      { "from": "case_lookup", "to": "callback_booking", "turn_ref": "T09" },
+      { "from": "callback_booking", "to": "email_confirmation", "turn_ref": "T11" },
+      { "from": "email_confirmation", "to": "closure", "turn_ref": "T23" }
+    ]
+  },
+  "layer3_customer": {
+    "crm_id": "cust_weber_7734",
+    "name": "Thomas Weber",
+    "phone": "+4917638821044",
+    "email": "thomas.weber@posteo.net",
+    "vnr_last4": "7734",
+    "prior_callback_promised": "2026-06-09T10:00:00+02:00",
+    "prior_callback_honored": false,
+    "open_cases": ["case_8821", "case_8834"],
+    "delivery_status": "delayed",
+    "identity_verified": true
+  }
+}

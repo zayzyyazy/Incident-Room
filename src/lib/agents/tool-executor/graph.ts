@@ -35,10 +35,10 @@ export type GraphStateType = typeof GraphState.State;
 
 export async function runToolExecutor(
   input: { 
-    messages: Array<{ role: string; content: string }>;
+    messages?: Array<{ role: string; content: string }>;
     roomId: string;
     userId: string;
-    decision: ToolDecision;
+    decision?: ToolDecision | null;
   },
   threadId?: string
 ) {
@@ -59,10 +59,10 @@ export async function runToolExecutor(
 
   const result = await graph.invoke(
     {
-      messages: input.messages,
+      messages: input.messages ?? [],
       roomId: input.roomId,
       userId: input.userId,
-      decision: input.decision,
+      decision: input.decision ?? null,
       result: "",
       toolCalls: [],
     },

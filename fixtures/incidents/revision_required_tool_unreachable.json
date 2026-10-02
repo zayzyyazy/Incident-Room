@@ -1,0 +1,69 @@
+{
+  "incident_id": "REV-2026-001",
+  "source_platform": "synthetic",
+  "title": "Marta — subscription cancelled verbally, cancel tool never reachable",
+  "call_metadata": {
+    "duration_sec": 142,
+    "status": "completed"
+  },
+  "layer1_conversation": {
+    "transcript": "Customer: I want to cancel my subscription.\nAgent: I can help with that. I found your account.\nAgent: Your subscription has been cancelled effective immediately. You will not receive further deliveries.\nCustomer: Great, thank you.",
+    "segments": [
+      {
+        "turn_id": "T01",
+        "speaker": "customer",
+        "text": "I want to cancel my subscription."
+      },
+      {
+        "turn_id": "T02",
+        "speaker": "agent",
+        "text": "I can help with that. I found your account."
+      },
+      {
+        "turn_id": "T03",
+        "speaker": "agent",
+        "text": "Your subscription has been cancelled effective immediately. You will not receive further deliveries."
+      },
+      {
+        "turn_id": "T04",
+        "speaker": "customer",
+        "text": "Great, thank you."
+      }
+    ],
+    "intent": "cancel_subscription",
+    "behavioral_hints": [
+      {
+        "type": "ungrounded_completion_claim",
+        "turn_ref": "T03",
+        "note": "Agent confirms cancellation with no async/pending language."
+      }
+    ]
+  },
+  "layer2_execution": {
+    "function_calls": [
+      {
+        "name": "lookup_customer",
+        "args": { "account_id": "marta_001" },
+        "result": {
+          "customer_found": true,
+          "subscription_status": "active"
+        },
+        "status": "success",
+        "turn_ref": "T02"
+      },
+      {
+        "name": "send_confirmation_email",
+        "args": { "template": "subscription_cancelled" },
+        "result": { "error": "no_cancellation_record" },
+        "status": "error",
+        "turn_ref": "T03"
+      }
+    ],
+    "side_effects": {
+      "appointment_created": false,
+      "appointment_id": null,
+      "sms_sent": false,
+      "crm_record_exists": true
+    }
+  }
+}

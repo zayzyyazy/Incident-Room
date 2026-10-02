@@ -10,7 +10,7 @@ const PREMATURE_CLOSURE_HINT_TYPES = new Set([
 
 /** Agent phrasing that tells the customer the request is done (L1 perception). */
 const AGENT_COMPLETION_PATTERN =
-  /\b(I'?ve updated|updated your|I have updated|is scheduled|I'?ve scheduled|callback is|appointment is|You'?ll receive|confirmation shortly|is confirmed|has been updated|is set for)\b/i;
+  /\b(I'?ve updated|updated your|I have updated|is scheduled|I'?ve scheduled|callback is|appointment is|You'?ll receive|confirmation shortly|is confirmed|has been updated|is set for|I'?ve placed your order|order is confirmed|order has been placed|placed your order)\b/i;
 
 export function getPrematureClosureTurnRefs(
   layer1?: Layer1Conversation,

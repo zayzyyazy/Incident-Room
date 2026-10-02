@@ -4,31 +4,159 @@
       "customer_id": "cust_klaus_001",
       "name": "Klaus Müller",
       "phone": "+491701234567",
+      "email": "klaus.mueller@example.de",
+      "birth_date": "1958-03-14",
+      "address": "Hauptstraße 8, 10115 Berlin",
       "vnr_last4": "4821",
       "prior_calls_14d": 3,
-      "open_tickets": [
-        {
-          "id": "T-4421",
-          "status": "open",
-          "subject": "Callback never happened"
-        }
-      ],
-      "notes": "Third scheduling failure in two weeks"
+      "open_tickets": [{ "id": "T-4421", "status": "open", "subject": "Callback never happened" }],
+      "notes": "PMB-2024-0847 · callback promised, create_callback_appointment failed"
     },
     {
       "customer_id": "cust_maria_002",
       "name": "Maria Schmidt",
       "phone": "+491709876543",
+      "email": "maria.schmidt@example.de",
+      "birth_date": "1972-08-22",
+      "address": "Hauptstrasse 12, 10115 Berlin",
       "vnr_last4": "1192",
       "prior_calls_14d": 1,
+      "open_tickets": [{ "id": "T-5501", "status": "open", "subject": "Address change not reflected in CRM" }],
+      "notes": "SYN-2024-0002 · CRM write rejected on address update"
+    },
+    {
+      "customer_id": "104202",
+      "name": "Anissa Jukul",
+      "phone": "+4917630671098",
+      "email": "medic1praxis@gmail.com",
+      "birth_date": "2021-04-10",
+      "address": "Odwerk 620",
+      "vnr_last4": "0201",
+      "prior_calls_14d": 4,
+      "open_tickets": [{ "id": "T-6102", "status": "open", "subject": "Missing items in Pflegemittelbox" }],
+      "notes": "LEAP-2026-0613 · handoff email failed"
+    },
+    {
+      "customer_id": "pt_maria_santos",
+      "name": "Maria Santos",
+      "phone": "+16175550988",
+      "email": "maria.santos@example.com",
+      "birth_date": "1985-11-03",
+      "address": "44102 Brookpark Rd, Cleveland OH",
+      "vnr_last4": "0988",
+      "prior_calls_14d": 2,
+      "open_tickets": [{ "id": "T-7701", "status": "open", "subject": "Reschedule not confirmed" }],
+      "notes": "retell_call_clinic_44102 · reschedule_appointment HTTP 503"
+    },
+    {
+      "customer_id": "cust_vogt_2291",
+      "name": "Elena Vogt",
+      "phone": "+4915122291844",
+      "email": "elena.vogt@example.de",
+      "birth_date": "1963-07-19",
+      "address": "Lindenweg 4, 80331 München",
+      "vnr_last4": "2291",
+      "prior_calls_14d": 2,
+      "open_tickets": [{ "id": "T-3310", "status": "open", "subject": "Pause vs cancel confusion" }],
+      "notes": "PMB-2026-0617 · pause_delivery failed, agent said cancelled"
+    },
+    {
+      "customer_id": "cust_weber_7734",
+      "name": "Thomas Weber",
+      "phone": "+4917638821044",
+      "email": "thomas.weber@example.de",
+      "birth_date": "1955-12-01",
+      "address": "Ringstraße 22, 50667 Köln",
+      "vnr_last4": "7734",
+      "prior_calls_14d": 5,
       "open_tickets": [
-        {
-          "id": "T-5501",
-          "status": "open",
-          "subject": "Address change not reflected in CRM"
-        }
+        { "id": "T-2201", "status": "open", "subject": "Callback + email confirmation missing" }
       ],
-      "notes": "CRM write rejected on address update"
+      "notes": "TEST-2026-0612 · duplicate callback attempts, email stress"
+    },
+    {
+      "customer_id": "cust_priya_004",
+      "name": "Priya Nair",
+      "phone": "+491601112233",
+      "email": "priya.nair@example.de",
+      "birth_date": "1990-02-14",
+      "address": "Gartenstraße 9, 70173 Stuttgart",
+      "vnr_last4": "4404",
+      "prior_calls_14d": 1,
+      "open_tickets": [{ "id": "T-8802", "status": "open", "subject": "Redelivery ticket only — no shipment" }],
+      "notes": "SYN-2026-0615-priya · schedule_redelivery never ran"
+    },
+    {
+      "customer_id": "cust_stefan_003",
+      "name": "Stefan Weber",
+      "phone": "+491709998877",
+      "email": "stefan.weber@example.de",
+      "birth_date": "1978-09-30",
+      "address": "Bahnhofstr. 15, 20095 Hamburg",
+      "vnr_last4": "3303",
+      "prior_calls_14d": 2,
+      "open_tickets": [{ "id": "T-9901", "status": "open", "subject": "Cancel confirmed but subscription still active" }],
+      "notes": "SYN-2026-0615-stefan · cancel tool never invoked"
+    },
+    {
+      "customer_id": "cust_8841",
+      "name": "Sandra Müller",
+      "phone": "+491511223344",
+      "email": "sandra.mueller@example.de",
+      "birth_date": "1968-05-08",
+      "address": "Waldweg 3, 04109 Leipzig",
+      "vnr_last4": "8841",
+      "prior_calls_14d": 3,
+      "open_tickets": [{ "id": "T-1204", "status": "open", "subject": "Opaque redelivery status" }],
+      "notes": "LEAP-2026-0614 · redelivery path unclear in trace"
+    },
+    {
+      "customer_id": "cust_marta_001",
+      "name": "Marta Kowalski",
+      "phone": "+491522334455",
+      "email": "marta.k@example.de",
+      "birth_date": "1949-01-22",
+      "address": "Parkallee 7, 28209 Bremen",
+      "vnr_last4": "7001",
+      "prior_calls_14d": 4,
+      "open_tickets": [{ "id": "T-REV01", "status": "open", "subject": "Cancel tool unreachable" }],
+      "notes": "REV-2026-001 · revision_required_tool_unreachable"
+    },
+    {
+      "customer_id": "cust_patricia_ng",
+      "name": "Patricia Ng",
+      "phone": "+14155550142",
+      "email": "patricia.ng@example.com",
+      "birth_date": "1982-06-11",
+      "address": "200 Market St, San Francisco CA",
+      "vnr_last4": "0142",
+      "prior_calls_14d": 1,
+      "open_tickets": [{ "id": "T-CRM42", "status": "open", "subject": "Deductible update failed" }],
+      "notes": "generic CRM import · update_policy_deductible rejected"
+    },
+    {
+      "customer_id": "cust_david_chen",
+      "name": "David Chen",
+      "phone": "+13125557890",
+      "email": "david.chen@example.com",
+      "birth_date": "1975-03-28",
+      "address": "1200 Lake Shore Dr, Chicago IL",
+      "vnr_last4": "7890",
+      "prior_calls_14d": 1,
+      "open_tickets": [{ "id": "T-RX01", "status": "open", "subject": "Pharmacist transfer failed" }],
+      "notes": "Bland import · warm_transfer_to_pharmacist timeout"
+    },
+    {
+      "customer_id": "cust_jordan_lee",
+      "name": "Jordan Lee",
+      "phone": "+12065551234",
+      "email": "jordan.lee@example.com",
+      "birth_date": "1992-10-05",
+      "address": "500 Pine St, Seattle WA",
+      "vnr_last4": "1234",
+      "prior_calls_14d": 2,
+      "open_tickets": [{ "id": "T-REF99", "status": "open", "subject": "Refund denied after agent promise" }],
+      "notes": "Vapi import · refund denied vs agent assurance"
     }
   ]
 }

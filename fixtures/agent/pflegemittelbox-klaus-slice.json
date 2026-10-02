@@ -1,0 +1,123 @@
+{
+  "id": "019d95e4-3f5c-7b50-9564-577e6f463c71",
+  "name": "[Neu Status] Pflegemittelbox (Klaus slice)",
+  "platform": "leaping",
+  "system_message_excerpt": "LIEFERSTATUS / BOXSTATUS rules and global conversation policies. Sonstiges handoffs require manual colleague follow-up.",
+  "stages": [
+    {
+      "id": "069318de-90ba-7575-8000-da119d5c5106",
+      "name": "Intentermittlung",
+      "type": "response",
+      "transitions": [
+        {
+          "id": "069318de-90ba-7575-8000-da119d5c5106-sonstiges",
+          "to": "fd967f98-2f26-49b0-9713-aeafe6670493",
+          "name": "sonstiges"
+        }
+      ]
+    },
+    {
+      "id": "fd967f98-2f26-49b0-9713-aeafe6670493",
+      "name": "intent_sonstiges",
+      "type": "field_setter",
+      "field_name": "intent",
+      "value": "sonstiges",
+      "transitions": [
+        {
+          "to": "27411b25-0e4a-4fbe-933e-70ebdc7afc0f",
+          "name": "Next Stage"
+        }
+      ]
+    },
+    {
+      "id": "27411b25-0e4a-4fbe-933e-70ebdc7afc0f",
+      "name": "Kundenidentifizierung",
+      "type": "dialogue",
+      "functions": [
+        "get_customer_by_insurance_number",
+        "check_birthday",
+        "check_insurance_number_format"
+      ],
+      "transitions": [
+        {
+          "to": "c36d96f0-c122-4f2b-aa10-dfec27c90d90",
+          "name": "weiter"
+        }
+      ]
+    },
+    {
+      "id": "c6754cc3-030f-4f1b-96c2-b3797a00d10b",
+      "name": "Switch Stage",
+      "type": "switch",
+      "field_name": "intent",
+      "default": "Default",
+      "transitions": [
+        {
+          "id": "c6754cc3-030f-4f1b-96c2-b3797a00d10b-default",
+          "to": "23075e2c-a16f-403a-8bbd-0356a093902d",
+          "name": "Default",
+          "description": "sonstiges and other intents without dedicated branch"
+        }
+      ]
+    },
+    {
+      "id": "23075e2c-a16f-403a-8bbd-0356a093902d",
+      "name": "pre_handoff_completed_flag",
+      "type": "field_setter",
+      "field_name": "leaping_conversation_completed",
+      "value": true,
+      "transitions": [
+        {
+          "to": "6e34730e-43f5-49ac-8e4b-571f1a6ce3f8",
+          "name": "Next Stage"
+        }
+      ]
+    },
+    {
+      "id": "6e34730e-43f5-49ac-8e4b-571f1a6ce3f8",
+      "name": "Anliegenaufnahme + Email",
+      "type": "dialogue",
+      "functions": ["send_email"],
+      "stage_message": "Schritt 1: summarize request. Schritt 2: call send_email — do NOT tell customer it was sent yet. Schritt 3: ONLY after send_email succeeds, confirm Übermittlung to customer.",
+      "transitions": [
+        {
+          "to": "6f3772d2-b967-4a0e-b2e2-a5f93c5a4857",
+          "name": "end"
+        }
+      ]
+    },
+    {
+      "id": "56c7bef3-cc5d-4129-a8b3-e6f721b8f0f6",
+      "name": "Kuendigung und Pausierung",
+      "type": "dialogue",
+      "functions": ["update_status_box"],
+      "stage_message": "Fehler (Funktionsaufruf schlägt fehl): Informiere den Kunden und rufe Transition ticket auf.",
+      "transitions": [
+        {
+          "name": "ticket",
+          "to": "23075e2c-a16f-403a-8bbd-0356a093902d"
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "send_email",
+      "type": "api_call",
+      "method": "POST",
+      "description": "Handoff email to colleagues — success required before customer confirmation in Anliegenaufnahme Schritt 3"
+    },
+    {
+      "name": "get_customer_by_insurance_number",
+      "type": "api_call",
+      "method": "GET",
+      "description": "Customer lookup by insurance number"
+    },
+    {
+      "name": "update_status_box",
+      "type": "api_call",
+      "method": "PUT",
+      "description": "Box status update with explicit failure→ticket path"
+    }
+  ]
+}

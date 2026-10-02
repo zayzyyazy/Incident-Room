@@ -32,10 +32,10 @@ export type GraphStateType = typeof GraphState.State;
 
 export async function runDoer(
   input: { 
-    messages: Array<{ role: string; content: string }>;
+    messages?: Array<{ role: string; content: string }>;
     roomId: string;
     userId: string;
-    intent: string;
+    intent?: string;
   },
   threadId?: string
 ) {
@@ -56,10 +56,10 @@ export async function runDoer(
 
   const result = await graph.invoke(
     {
-      messages: input.messages,
+      messages: input.messages ?? [],
       roomId: input.roomId,
       userId: input.userId,
-      intent: input.intent,
+      intent: input.intent ?? "unknown",
       decision: null,
     },
     config
