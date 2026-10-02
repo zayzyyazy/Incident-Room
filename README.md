@@ -2,7 +2,7 @@
 
 > **The customer was told it worked. Did it actually work?**
 
-Incident Room is a production-ready incident investigation desk for AI customer-support and voice-agent workflows. It catches the gap between what an agent confidently tells a customer and what actually happened in backend tools, CRM records, scheduling APIs, refunds, handoffs, or order systems.
+Incident Room is an incident investigation desk for AI customer-support and voice-agent workflows. It catches the gap between what an agent confidently tells a customer and what actually happened in backend tools, CRM records, scheduling APIs, refunds, handoffs, or order systems.
 
 Built for the **Band of Agents Hackathon**, the project uses Band rooms as the collaboration and audit layer for multi-agent incident response, while keeping production-safe fallbacks so the app still works on Vercel/Netlify when Band agents are slow, waiting, rate-limited, or unavailable.
 
@@ -16,7 +16,7 @@ Built for the **Band of Agents Hackathon**, the project uses Band rooms as the c
   </a>
 </p>
 
-<p align="center"><em>▶ <a href="docs/screenshots/incident-room-demo.webm">Short demo</a> · <a href="docs/screenshots/incident-room-full-demo.webm">Full investigation</a> — <code>retell_call_clinic_44102</code></em></p>
+<p align="center"><em>▶ <a href="docs/screenshots/incident-room-demo.webm">Short demo</a> — <code>retell_call_clinic_44102</code></em></p>
 
 ---
 
@@ -251,13 +251,11 @@ http://localhost:3000
 
 Hero demo:
 
-<<<<<<< HEAD
 ```text
 retell_call_clinic_44102
 ```
-=======
-Regenerate media: `npm run record-full-demo` (full ~2 min video) or `npm run capture-demo` (screenshots + short clip)
->>>>>>> e208d61 (Add full investigation video recorder and wait for Cleared state.)
+
+Regenerate media: `npm run record-full-demo` (full ~2 min video) or `npm run capture-demo` (screenshots + short clip).
 
 ---
 
